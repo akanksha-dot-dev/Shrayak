@@ -231,9 +231,8 @@ async function getWageRates() {
     const res = await client.search({
       index: WAGES_INDEX,
       body: {
-        size: 10,
+        size: 50,
         query: { match_all: {} },
-        sort: [{ '@indexed_at': { order: 'desc' } }],
       },
     });
 
