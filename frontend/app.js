@@ -33,7 +33,7 @@ function resolveDOM() {
     // Sidebar persona
     personaCards: g('persona-cards'),
     // AQI
-    aiqPillDot:   g('aqi-dot'),
+    aqiPillDot:   g('aqi-dot'),
     aqiPillNum:   g('aqi-value'),
     aqiPillStage: g('aqi-grap'),
     gaugeNum:     g('gauge-number'),
@@ -238,21 +238,21 @@ const AQI = {
     const emoji = d.emoji ?? '🟢';
 
     // Topbar pill
-    D.aiqPillDot.style.background  = color;
-    D.aiqPillDot.style.boxShadow   = `0 0 8px ${color}80`;
+    D.aqiPillDot.style.background  = color;
+    D.aqiPillDot.style.boxShadow   = `0 0 8px ${color}80`;
     D.aqiPillNum.textContent        = aqi > 0 ? aqi : '--';
     D.aqiPillNum.style.color        = color;
     D.aqiPillStage.textContent      = `${emoji} ${grap}`;
 
     // Sidebar ring gauge (SVG)
-    // Circumference of r=50 circle = 2πr ≈ 314
+    // circumference of r=50: 2π×50 ≈ 314.16
     const CIRC = 314;
-    const pct = Math.min(aqi / 500, 1);
+    const pct    = Math.min(aqi / 500, 1);
     const offset = CIRC * (1 - pct);
-    D.ringFill.style.strokeDashoffset = offset;
-    D.ringFill.style.stroke = color;
-    D.gaugeNum.textContent  = aqi > 0 ? aqi : '--';
-    D.gaugeNum.style.color  = color;
+    D.ringFill.setAttribute('stroke-dashoffset', String(offset));
+    D.ringFill.setAttribute('stroke', color);
+    D.gaugeNum.textContent = aqi > 0 ? aqi : '--';
+    D.gaugeNum.style.color = color;
 
     // Details
     D.grapStage.textContent  = `Stage ${d.grapStage ?? 0} — ${grap}`;
