@@ -169,29 +169,31 @@ const Personas = {
     if (el) el.classList.add('active');
 
     // Chat bar
+    const isEn = state.language === 'en';
     D.chatAvatar.textContent = p.avatar;
     D.chatAvatar.style.borderColor = p.color;
-    D.chatName.textContent = `${p.name} — ${p.occupation}`;
-    D.chatSub.textContent  = `${p.originHindi} | ${p.occupationHindi}`;
+    D.chatName.textContent = isEn ? `${p.name} — ${p.occupation}` : `${p.nameHindi} — ${p.occupationHindi}`;
+    D.chatSub.textContent  = isEn ? `${p.origin} | ${p.occupation}` : `${p.originHindi} | ${p.occupationHindi}`;
 
     // Starter questions
     this.renderStarters(p);
 
     // Welcome message
-    addBotMsg(p.welcomeMessage, [], null, true);
-
-
+    const welcome = isEn ? (p.welcomeMessageEn ?? p.welcomeMessage) : p.welcomeMessage;
+    addBotMsg(welcome, [], null, true);
 
     // Close mobile sidebar
     D.sidebar.classList.remove('open');
     D.sbOverlay.classList.remove('show');
 
-    toast(`${p.avatar} ${p.name} selected`);
+    toast(isEn ? `${p.avatar} ${p.name} selected` : `${p.avatar} ${p.nameHindi} चुना गया`);
   },
 
   renderStarters(p) {
     D.starters.innerHTML = '';
-    (p.starterQuestions ?? []).forEach(q => {
+    const isEn = state.language === 'en';
+    const questions = isEn ? (p.starterQuestionsEn ?? p.starterQuestions) : p.starterQuestions;
+    (questions ?? []).forEach(q => {
       const btn = document.createElement('button');
       btn.className = 'starter-btn';
       btn.textContent = q;
