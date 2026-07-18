@@ -789,7 +789,15 @@ function fallbackPersonas() {
       avatar: '👷', color: '#f97316', language: 'hi',
       aqiSensitive: true, geoFocused: true,
       starterQuestions: ['मेरा न्यूनतम वेतन क्या है?', 'BOCW कार्ड कैसे बनाएं?', 'मुझे श्रम कार्यालय कहाँ मिलेगा?'],
+      starterQuestionsEn: [
+        'Should I go to work today? Air pollution in Delhi is very high.',
+        'My contractor pays me ₹700 daily — is this correct?',
+        'How do I register for a BOCW card? What benefits will I get?',
+        'I do not have any written contract — can I still file a complaint?',
+        'Where can I find the nearest Labour Office?',
+      ],
       welcomeMessage: 'नमस्ते रमेश! मैं Shrayak हूं। आज आपके अधिकारों और न्यूनतम वेतन की जानकारी दूंगा।',
+      welcomeMessageEn: 'Namaste Ramesh! I am Shrayak. Today, I will guide you on Delhi\'s air quality and your labor rights as a construction worker.',
     },
     {
       id: 'sita', name: 'Sita Devi', nameHindi: 'सीता देवी',
@@ -798,7 +806,15 @@ function fallbackPersonas() {
       avatar: '👩', color: '#8b5cf6', language: 'hi',
       aqiSensitive: false, geoFocused: true,
       starterQuestions: ['घरेलू कामगार का न्यूनतम वेतन?', 'e-Shram कार्ड कैसे बनाएं?', 'छुट्टी के अधिकार क्या हैं?'],
+      starterQuestionsEn: [
+        'My employer pays me ₹5000 a month — is this legal?',
+        'I do not get a single rest day in the week — what should I do?',
+        'What are the laws protecting domestic helpers?',
+        'If my employer behaves badly, where should I file a complaint?',
+        'What do I need to register for an e-Shram card?',
+      ],
       welcomeMessage: 'नमस्ते सीता जी! आपके घरेलू कामगार अधिकारों के लिए यहां हूं।',
+      welcomeMessageEn: 'Namaste Sita Devi! I am Shrayak. I am here to help you understand your rights as a domestic helper.',
     },
     {
       id: 'priya', name: 'Priya Sharma', nameHindi: 'प्रिया शर्मा',
@@ -807,7 +823,15 @@ function fallbackPersonas() {
       avatar: '👩‍💼', color: '#06b6d4', language: 'hi',
       aqiSensitive: false, geoFocused: false,
       starterQuestions: ['ओवरटाइम का पैसा कितना मिलेगा?', 'ESI शिकायत कहां करें?', 'मातृत्व अवकाश कैसे मिलेगा?'],
+      starterQuestionsEn: [
+        'They make me work 10 hours at the factory — is this legal?',
+        'How much should I be paid for overtime hours?',
+        'ESI is deducted but I cannot get hospital treatments — what to do?',
+        'What is the process to get paid maternity leave?',
+        'What is the official minimum wage for semi-skilled workers?',
+      ],
       welcomeMessage: 'नमस्ते प्रिया! आपके कारखाना अधिकारों के बारे में बात करते हैं।',
+      welcomeMessageEn: 'Namaste Priya! I am Shrayak. I am here to help you check your factory worker rights and overtime pay.',
     },
   ];
 }
