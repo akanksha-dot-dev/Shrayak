@@ -564,6 +564,24 @@ function initEventListeners() {
     handleSubmit(DOM.queryInput.value);
   });
 
+  // Sidebar navigation click handlers (Desktop layout)
+  document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const query = btn.getAttribute('data-chat-query');
+      if (query) {
+        // Remove active class from all buttons and add to this one
+        document.querySelectorAll('.sidebar-nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        DOM.queryInput.value = query;
+        autoResizeTextarea();
+        updateCharCounter(query.length);
+        DOM.sendBtn.disabled = false;
+        handleSubmit(query);
+      }
+    });
+  });
+
   // Textarea — auto-resize, char counter, send button state, Enter-to-send
   DOM.queryInput.addEventListener('input', () => {
     const len = DOM.queryInput.value.length;
