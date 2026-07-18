@@ -440,13 +440,7 @@ async function sendMsg(override) {
     const d = await res.json();
     const ms = Date.now() - t0;
 
-    // AQI context for construction persona on halt days
-    let aqiCtx = null;
-    if (state.persona?.aqiSensitive && state.aqiData?.constructionStop) {
-      aqiCtx = state.aqiData;
-    }
-
-    addBotMsg(d.response ?? '❌ No response.', d.citations ?? [], d.nearestOffice ?? null, false, aqiCtx, ms);
+    addBotMsg(d.response ?? '❌ No response.', d.citations ?? [], d.nearestOffice ?? null, false, null, ms);
 
     // Refresh stats
     setTimeout(() => Stats.fetch(), 2000);
@@ -487,19 +481,6 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     ? `<div class="citations">${citations.map(c => `<span class="cite-chip">📋 ${esc(String(c))}</span>`).join('')}</div>`
     : '';
 
-  // AQI warning
-  let aqiHtml = '';
-  if (aqiCtx) {
-    aqiHtml = `
-      <div class="chat-aqi-warn" style="background:${aqiCtx.color}12;border-color:${aqiCtx.color}30">
-        <div class="chat-aqi-warn-title" style="color:${aqiCtx.color}">
-          🌫️ GRAP ${aqiCtx.grapLabel} — Delhi AQI ${aqiCtx.aqi}
-        </div>
-        <p>${esc(aqiCtx.advisoryHi)}</p>
-      </div>
-    `;
-  }
-
   // Nearest office
   let offHtml = '';
   if (office) {
@@ -522,7 +503,6 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     <div class="msg-body">
       <div class="msg-bubble">
         ${content}
-        ${aqiHtml}
         ${offHtml}
         ${cites}
       </div>
@@ -586,8 +566,11 @@ function setupInput() {
     if (e.key === 'Enter') Geo.searchByPin(D.pinInput.value.trim());
   });
 
-  // GRAP dismiss
-  D.grapDismiss.addEventListener('click', hideGRAP);
+  // Worker search
+  D.workerBtn.addEventListener('click', () => WorkerRegistry.search(D.workerInput.value.trim()));
+  D.workerInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') WorkerRegistry.search(D.workerInput.value.trim());
+  });
 
   // Mobile sidebar
   D.menuBtn.addEventListener('click', () => {
@@ -612,8 +595,8 @@ function fallbackPersonas() {
       occupation: 'Construction Worker', occupationHindi: 'निर्माण श्रमिक',
       avatar: '👷', color: '#f97316', language: 'hi',
       aqiSensitive: true, geoFocused: true,
-      starterQuestions: ['मेरा न्यूनतम वेतन क्या है?', 'BOCW कार्ड कैसे बनाएं?', 'क्या आज काम बंद है?'],
-      welcomeMessage: 'नमस्ते रमेश! मैं Shrayak हूं। आज दिल्ली AQI और आपके अधिकारों की जानकारी दूंगा।',
+      starterQuestions: ['मेरा न्यूनतम वेतन क्या है?', 'BOCW कार्ड कैसे बनाएं?', 'मुझे श्रम कार्यालय कहाँ मिलेगा?'],
+      welcomeMessage: 'नमस्ते रमेश! मैं Shrayak हूं। आज आपके अधिकारों और न्यूनतम वेतन की जानकारी दूंगा।',
     },
     {
       id: 'sita', name: 'Sita Devi', nameHindi: 'सीता देवी',
@@ -645,7 +628,6 @@ async function boot() {
 
   await Promise.allSettled([
     Personas.init(),
-    AQI.init(),
     Stats.init(),
     healthCheck(),
   ]);

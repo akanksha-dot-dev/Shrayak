@@ -187,74 +187,65 @@ Your current user context is Priya Sharma, a garment factory worker from Rajasth
     }
 ]
 
-# Fetch simulated or real AQI
-def fetch_aqi():
+# Search workers registry
+def search_workers(query):
+    if not es_client:
+        fallback = [
+            {
+                "uan": "1008-2345-9011",
+                "name": "Ramesh Kumar",
+                "nameHindi": "रमेश कुमार",
+                "skillCategory": "skilled",
+                "occupationHindi": "निर्माण श्रमिक (राजमिस्त्री)",
+                "dailyWagePaid": 800.0,
+                "currentEmployer": "Sharma Builders, Sector-18 Rohini",
+                "bocwRegistered": False,
+                "stateOfOriginHindi": "बिहार"
+            },
+            {
+                "uan": "1008-8833-2947",
+                "name": "Sita Devi",
+                "nameHindi": "सीता देवी",
+                "skillCategory": "unskilled",
+                "occupationHindi": "घरेलू कामगार",
+                "dailyWagePaid": 750.0,
+                "currentEmployer": "Independent Apartments, Vasant Kunj",
+                "bocwRegistered": False,
+                "stateOfOriginHindi": "उत्तर प्रदेश"
+            },
+            {
+                "uan": "1008-4492-8822",
+                "name": "Priya Sharma",
+                "nameHindi": "प्रिया शर्मा",
+                "skillCategory": "semi-skilled",
+                "occupationHindi": "वस्त्र उद्योग श्रमिक (दर्जी)",
+                "dailyWagePaid": 850.0,
+                "currentEmployer": "Royal Apparels, Okhla Industrial Area",
+                "bocwRegistered": False,
+                "stateOfOriginHindi": "राजस्थान"
+            }
+        ]
+        q_low = query.lower()
+        return [w for w in fallback if q_low in w["name"].lower() or q_low in w["uan"]]
     try:
-        # Fallback to simulated data if API fails
-        aqi_val = 310
-        grap_stage = 2
-        grap_lbl = "Very Poor"
-        color = "#ef4444"
-        emoji = "🚫"
-        advisory_hi = "GRAP चरण II: निर्माण कार्य प्रतिबंधित! आज सभी धूल उत्पन्न करने वाले निर्माण कार्य बंद हैं। आपको वेतन सहित छुट्टी मिलेगी — नियोक्ता को आपका दैनिक वेतन देना अनिवार्य है।"
-        
-        # Try OpenAQ live fetch if possible
-        r = requests.get("https://api.openaq.org/v3/locations/270428", timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            sensors = data.get("results", [{}])[0].get("sensors", [])
-            for s in sensors:
-                if s.get("parameter", {}).get("name") == "pm25":
-                    latest = s.get("latestMeasurement", {})
-                    pm25_val = latest.get("value", 0)
-                    # Convert PM2.5 to simulated AQI
-                    aqi_val = int(pm25_val * 3)
-                    break
-        
-        if aqi_val <= 200:
-            grap_stage = 0
-            grap_lbl = "Good / Moderate"
-            color = "#22c55e"
-            emoji = "✅"
-            advisory_hi = "वायु गुणवत्ता अच्छी है। आज निर्माण कार्य की अनुमति है।"
-        elif aqi_val <= 300:
-            grap_stage = 1
-            grap_lbl = "Poor"
-            color = "#f97316"
-            emoji = "⚠️"
-            advisory_hi = "वायु गुणवत्ता खराब है। धूल नियंत्रण अनिवार्य। पानी का छिड़काव करें। मास्क पहनें।"
-        elif aqi_val <= 400:
-            grap_stage = 2
-            grap_lbl = "Very Poor"
-            color = "#ef4444"
-            emoji = "🚫"
-            advisory_hi = "GRAP चरण II: निर्माण कार्य प्रतिबंधित! आपको वेतन सहित छुट्टी मिलेगी — नियोक्ता को आपका दैनिक वेतन देना अनिवार्य है।"
+        is_uan = "-" in query or (query.isdigit() and len(query) == 12)
+        if is_uan:
+            formatted_uan = query
+            if len(query) == 12:
+                formatted_uan = f"{query[0:4]}-{query[4:8]}-{query[8:12]}"
+            q = {"term": {"uan": formatted_uan}}
         else:
-            grap_stage = 3
-            grap_lbl = "Severe / Severe+"
-            color = "#8b5cf6"
-            emoji = "🚨"
-            advisory_hi = "GRAP चरण III/IV: पूर्ण निर्माण प्रतिबंध! आपको पूरी मजदूरी सहित सवैतनिक अवकाश मिलना आपका अधिकार है।"
-
-        return {
-            "aqi": aqi_val,
-            "grapStage": grap_stage,
-            "grapLabel": grap_lbl,
-            "color": color,
-            "emoji": emoji,
-            "advisoryHi": advisory_hi,
-            "constructionStop": grap_stage >= 2
-        }
+            q = {
+                "multi_match": {
+                    "query": query,
+                    "fields": ["name^2", "nameHindi^2", "occupation", "stateOfOrigin"]
+                }
+            }
+        res = es_client.search(index="delhi_workers", body={"query": q, "size": 5})
+        hits = res.get("hits", {}).get("hits", [])
+        return [h.get("_source", {}) for h in hits]
     except Exception:
-        return {
-            "aqi": 310,
-            "grapStage": 2,
-            "grapLabel": "Very Poor",
-            "color": "#ef4444",
-            "emoji": "🚫",
-            "advisoryHi": "GRAP चरण II: निर्माण कार्य प्रतिबंधित! आज सभी धूल उत्पन्न करने वाले निर्माण कार्य बंद हैं। आपको वेतन सहित छुट्टी मिलेगी — नियोक्ता को आपका दैनिक वेतन देना अनिवार्य है।",
-            "constructionStop": True
-        }
+        return []
 
 # Zero-Trust PII Redaction
 def strip_pii(text):
@@ -497,9 +488,6 @@ if "chat_history" not in st.session_state:
 if "selected_persona_id" not in st.session_state:
     st.session_state.selected_persona_id = "ramesh"
 
-# Fetch AQI once per session/interaction
-aqi_data = fetch_aqi()
-
 # --- SIDEBAR CONTENT ---
 with st.sidebar:
     # Logo Area
@@ -540,26 +528,36 @@ with st.sidebar:
     st.markdown(f"<p style='font-size:0.8rem; color:#94a3b8;'>Occupation: {active_persona['occupation']}</p>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # 2. Delhi AQI Live Gauge
-    st.subheader("🌫️ Delhi AQI Live")
-    color = aqi_data["color"]
-    st.markdown(f"""
-    <div class="metric-card" style="border-left: 4px solid {color};">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div>
-                <span class="stat-label">Live AQI</span>
-                <div style="font-size: 2rem; font-weight: 900; color: {color}; line-height: 1;">{aqi_data['aqi']}</div>
-            </div>
-            <div style="text-align: right;">
-                <span class="stat-label">GRAP Status</span>
-                <div style="font-size: 0.85rem; font-weight: 700; color: {color};">{aqi_data['emoji']} {aqi_data['grapLabel']}</div>
-            </div>
-        </div>
-        <div style="margin-top: 8px; font-size: 0.72rem; color: #94a3b8; font-family: 'Noto Sans Devanagari', sans-serif;">
-            {aqi_data['advisoryHi']}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # 2. Worker Registry Search
+    st.subheader("👥 Worker Registry")
+    worker_q = st.text_input("Search UAN or Name (e.g. Ramesh):")
+    if worker_q:
+        results = search_workers(worker_q)
+        if results:
+            for w in results:
+                min_rate = 743
+                if w["skillCategory"] == "semi-skilled": min_rate = 817
+                if w["skillCategory"] == "skilled": min_rate = 899
+                
+                is_compliant = w["dailyWagePaid"] >= min_rate
+                status_color = "#22c55e" if is_compliant else "#ef4444"
+                status_text = "🟢 Compliant" if is_compliant else "🔴 Underpaid"
+                
+                st.markdown(f"""
+                <div class="metric-card" style="border-left: 4px solid {status_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="font-size: 0.8rem; color: #e2e8f8;">{w['nameHindi']} ({w['name']})</strong>
+                        <span style="font-size: 0.65rem; padding: 2px 6px; background: rgba(0,0,0,0.1); color: {status_color}; border-radius: 10px;">{status_text}</span>
+                    </div>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 2px 0;"><b>UAN:</b> {w['uan']}</p>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 2px 0;"><b>Occupation:</b> {w['occupationHindi']}</p>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 2px 0;"><b>Daily Wage:</b> ₹{w['dailyWagePaid']}/day (Min: ₹{min_rate})</p>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 2px 0;"><b>Employer:</b> {w['currentEmployer']}</p>
+                    <p style="font-size: 0.72rem; color: #94a3b8; margin: 2px 0;"><b>BOCW Registered:</b> {"Yes" if w['bocwRegistered'] else "No"}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning("No worker matches found.")
     st.markdown("---")
     
     # 3. Nearest Office Finder
@@ -605,13 +603,7 @@ with st.sidebar:
 st.markdown(f"### {active_persona['avatar']} Shrayak — {active_persona['nameHindi']} ({active_persona['occupationHindi']})")
 st.markdown("AI-Powered Delhi Migrant & Labour Rights Legal Agent")
 
-# Show GRAP Alert Banner dynamically if sensitive worker is selected and AQI is high
-if active_persona["aqiSensitive"] and aqi_data["constructionStop"]:
-    st.markdown(f"""
-    <div class="grap-warn">
-        <strong>🚨 GRAP Emergency Work Halt:</strong> Delhi AQI is <b>{aqi_data['aqi']}</b> ({aqi_data['grapLabel']}). All dust-generating construction halts are BANNED. You are entitled to <b>PAID LEAVE</b> under the BOCW Act.
-    </div>
-    """, unsafe_allow_html=True)
+
 
 # Display Chat Starter Questions if chat history is empty
 if len(st.session_state.chat_history) == 0:
@@ -682,11 +674,7 @@ if user_query or (len(st.session_state.chat_history) > 0 and st.session_state.ch
         context_str += f"\n- Source: {statute}\n  Content: {content}\n"
         citations.append(statute)
         
-    # Add live AQI status to context if Ramesh Kumar (construction worker) is selected
-    if active_persona["id"] == "ramesh":
-        context_str += f"\n- Live Air Quality: Today Delhi AQI is {aqi_data['aqi']} ({aqi_data['grapLabel']}). "
-        context_str += f"GRAP construction allowed is {not aqi_data['constructionStop']}. "
-        context_str += f"Legal instruction for Ramesh today: {aqi_data['advisoryHi']}"
+
 
     # Generate response via Gemini
     response_text = ""
@@ -711,8 +699,7 @@ ANSWER:"""
         # Factual fallback if API key is not configured
         if categories and "minimum_wage" in categories:
             response_text = "दिल्ली सरकार की जुलाई 2026 की अधिसूचना के तहत अकुशल श्रमिक का न्यूनतम वेतन ₹18,066 प्रति माह (₹695 प्रतिदिन) है। अर्ध-कुशल का ₹19,901 प्रति माह (₹765 प्रतिदिन) और कुशल का ₹21,883 प्रति माह (₹842 प्रतिदिन) है।"
-        elif active_persona["id"] == "ramesh" and aqi_data["constructionStop"]:
-            response_text = f"दिल्ली में प्रदूषण {aqi_data['aqi']} होने के कारण GRAP-II लागू है और निर्माण बंद है। BOCW बोर्ड के नियमों के तहत ठेकेदार को आज की सवैतनिक छुट्टी (paid compensation) देनी होगी।"
+
         else:
             response_text = "नमस्ते! मैं आपके अधिकारों के बारे में जानकारी ढूंढ रहा हूं। कृपया सुनिश्चित करें कि आपने अपना .env फ़ाइल में GEMINI_API_KEY भरा है।"
 
