@@ -397,24 +397,231 @@ function detectLocalIntent(query) {
   return matched.size > 0 ? [...matched] : ['general'];
 }
 
+// ── English Expert Knowledge Base ──────────────────────────────────────────────
+const KNOWLEDGE_EN = {
+  minimum_wage: {
+    title: '💰 Minimum Wages — July 2026',
+    response: `🙏 **Delhi Minimum Wages — July 2026 (Effective 01 July 2026)**
+
+**Wage Rates (वेतन दरें):**
+
+| Category | Daily Rate | Monthly Rate (26 days) |
+|---|---|---|
+| Unskilled | ₹743/day | ₹19,318/month |
+| Semi-Skilled | ₹817/day | ₹21,242/month |
+| Skilled | ₹899/day | ₹23,374/month |
+| Highly Skilled | ₹988/day | ₹25,688/month |
+
+**Overtime:**
+Overtime hours must be paid at **double (2x)** the normal wage rate.
+
+**If you are underpaid:**
+1. Demand payment in writing from your employer.
+2. File a complaint at the Delhi Labour Department.
+3. Helpline: **1800-11-2345** (Toll-Free)
+
+📜 **Legal Basis:** Minimum Wages Act, 1948 — Section 3 | Delhi Notification F.1(14)/MW/2026
+📞 **Helpline:** 1800-11-2345 (Toll-Free, Free of cost)`,
+    citations: ['Minimum Wages Act, 1948 — Section 3', 'Delhi Notification F.1(14)/MW/2026'],
+  },
+
+  overtime: {
+    title: '⏰ Overtime Wages',
+    response: `🕐 **Overtime Wages — Your Rights & Calculations**
+
+**What is Overtime?**
+Any hours worked beyond 8 hours a day or 48 hours a week qualify as overtime.
+
+**Overtime Rate:**
+Overtime Pay = **Double (2x)** the normal daily wage rate.
+
+**Examples:**
+- Unskilled Worker: ₹743/8 hrs × 2 = **₹185.75/hour overtime**
+- Skilled Worker: ₹899/8 hrs × 2 = **₹224.75/hour overtime**
+
+**Contractor Responsibility:**
+Both the contractor and the principal employer are jointly responsible for paying overtime.
+
+📜 **Legal Basis:** Factories Act, 1948 — Section 59 | Minimum Wages Act, 1948 — Section 14
+📞 **Helpline:** 1800-11-2345 (Toll-Free)`,
+    citations: ['Factories Act, 1948 — Section 59', 'Minimum Wages Act, 1948 — Section 14'],
+  },
+
+  eshram: {
+    title: '📋 e-Shram Registration & Benefits',
+    response: `📱 **e-Shram Portal Registration & Social Security Benefits**
+
+**What is e-Shram?**
+A national database created by the Government of India for unorganized sector workers.
+
+**Key Benefits:**
+1. 🔵 **PM-SYM Pension** — ₹3,000/month after the age of 60
+2. 🛡️ **Accident Insurance** — ₹2 Lakh for accidental death/permanent disability
+3. 📄 **UAN Card** — Single card to access all central social welfare schemes
+4. 🏥 **Ayushman Bharat** — Health insurance coverage up to ₹5 Lakh
+5. 💰 **Disaster Relief** — Direct benefit transfers during national emergencies
+
+**How to Register (FREE):**
+1. 🌐 **Online:** Visit eshram.gov.in
+2. 📱 **CSC Centers:** Go to your nearest Common Service Centre
+3. 📞 **Helpline:** 14434
+
+📜 **Legal Basis:** Code on Social Security, 2020 — Section 113
+📞 **Helpline:** 14434 (e-Shram Portal) | 1800-11-2345 (Labour Dept)`,
+    citations: ['Code on Social Security, 2020 — Section 113'],
+  },
+
+  bocw: {
+    title: '🏗️ BOCW Construction Board Benefits',
+    response: `🏗️ **BOCW Welfare Scheme (Construction Workers)**
+
+If you have worked in construction for at least **90 days** in the past year, you are eligible for BOCW benefits:
+
+**Key Benefits:**
+1. 💀 **Death Benefit:** ₹3 Lakhs to family
+2. 🤕 **Disability Cover:** ₹1 Lakh to ₹3 Lakhs
+3. 🎓 **Scholarships:** ₹4,000 to ₹30,000/year for your children's education
+4. 💊 **Medical Aid:** Financial aid for hospitalization
+5. 🤱 **Maternity Benefit:** For female construction workers
+
+**How to register:**
+- Visit bocwdelhi.org and apply online.
+
+📜 **Legal Basis:** Building and Other Construction Workers Act, 1996 — Section 12
+📞 **Helpline:** 1800-11-2345 | 011-23392694`,
+    citations: ['BOCW Act, 1996 — Section 12', 'Delhi BOCW Rules, 2002'],
+  },
+
+  maternity: {
+    title: '🤱 Maternity Leave & Benefits',
+    response: `🤱 **Maternity Benefits — Rights of Women Workers**
+
+**Paid Maternity Leave:**
+- **26 weeks** (6.5 months) paid leave for the first 2 children
+- **12 weeks** paid leave for subsequent children
+
+**Eligibility:**
+- Must have worked at least **80 days** with the employer in the preceding 12 months.
+
+**Other Benefits:**
+1. 💊 **Medical Bonus:** ₹3,500 if employer does not provide free medical facilities
+2. 🏠 **Nursing Breaks:** Two breaks daily until child is 18 months old
+3. 🚫 **No Dismissal:** Dismissing a woman due to pregnancy is strictly illegal
+
+📜 **Legal Basis:** Maternity Benefit (Amendment) Act, 2017 — Section 5
+📞 **Women Helpline:** 181 | **Labour Helpline:** 1800-11-2345`,
+    citations: ['Maternity Benefit (Amendment) Act, 2017 — Section 5'],
+  },
+
+  pf_esi: {
+    title: '🏦 Provident Fund (PF) & ESI Insurance',
+    response: `🏦 **EPF (Provident Fund) & ESI (Employee State Insurance)**
+
+**1. EPF (Employees' Provident Fund):**
+- Applicable if your establishment has **20 or more** employees.
+- Contributions: Employee (12%) + Employer (12%) = **24% of basic wage** saved in your EPF account.
+- PF Helpline: **1800-118-005**
+
+**2. ESIC (Employee State Insurance):**
+- Applicable for establishments with 10+ employees where monthly wage is ≤₹21,000.
+- Benefits: Free healthcare at ESI hospitals, sickness cash benefit, and dependent pension.
+
+📜 **Legal Basis:** Employees' Provident Funds Act, 1952 | ESI Act, 1948
+📞 **Helpline:** 1800-11-2345 | **EPFO:** 1800-118-005`,
+    citations: ['Employees\' Provident Funds Act, 1952 — Section 2', 'ESI Act, 1948 — Section 2(12)'],
+  },
+
+  complaint: {
+    title: '⚖️ How to File a Labour Complaint',
+    response: `⚖️ **How to File a Complaint for Wage Theft or Rights Violation**
+
+**Where to File:**
+1. 🌐 **Online:** visit labour.delhi.gov.in or shramsuvidha.gov.in
+2. 📞 **Call Helpline:** **1800-11-2345** (Delhi Labour Helpline)
+3. 🏛️ **In-Person:** Visit the District Labour Office for your area (enter Pin Code in the sidebar finder to locate).
+
+**Required Documents:**
+- Salary slips or bank statement showing non-payment
+- Name, address, and contact number of the employer/contractor
+- Written description of the grievance
+
+📜 **Legal Basis:** Payment of Wages Act, 1936 — Section 15
+📞 **Helpline:** 1800-11-2345 (Toll-Free)`,
+    citations: ['Payment of Wages Act, 1936 — Section 15'],
+  },
+
+  migrant: {
+    title: '🚊 Migrant Worker Rights',
+    response: `🚊 **Migrant Worker Rights — Inter-State Migrant Workmen Act, 1979**
+
+**Your Core Rights:**
+1. 🎫 **Journey Allowance:** Travel fare to and from home state once a year
+2. 🏠 **Housing:** Employers must provide clean, suitable accommodation
+3. 💊 **Medical:** Free medical checkups and basic healthcare treatment
+4. 💰 **Displacement Allowance:** 50% of monthly wages at the time of recruitment
+
+📜 **Legal Basis:** Inter-State Migrant Workmen Act, 1979 — Section 13
+📞 **Helpline:** 1800-11-2345 (Toll-Free)`,
+    citations: ['Inter-State Migrant Workmen Act, 1979 — Section 13'],
+  },
+
+  domestic_worker: {
+    title: '🏠 Domestic Worker Rights',
+    response: `🏠 **Domestic Worker Rights & Minimum Wage Guidelines**
+
+**Minimum Wages for Domestic Help:**
+- Unskilled (Daily help, sweeping): ₹743/day | ₹19,318/month
+- Cooking/Childcare (Semi-skilled): ₹817/day | ₹21,242/month
+
+**Weekly Rest:**
+- 1 day of fully paid weekly rest is mandatory.
+
+📜 **Legal Basis:** Minimum Wages Act, 1948 | Delhi Domestic Workers Welfare Guidelines
+📞 **Helpline:** 1800-11-2345 (Toll-Free) | **Women Cell:** 181`,
+    citations: ['Minimum Wages Act, 1948'],
+  },
+
+  general: {
+    title: '⚖️ Shrayak — Labour Rights AI Assistant',
+    response: `🙏 **Welcome! I am Shrayak — your AI helper for worker rights in Delhi.**
+
+I can help you in Hindi or English with details on:
+1. 💰 **Minimum Wages** — Rates for Unskilled, Semi-skilled, Skilled categories
+2. ⏰ **Overtime Wages** — Calculating double overtime rates
+3. 📋 **e-Shram / BOCW Portal** — Registration, benefits, pensions
+4. 🤱 **Maternity Benefit** — Paid maternity leave guidelines
+5. ⚖️ **Filing Complaints** — Steps to report wage theft or contractor fraud
+
+Please select a persona or type your query below!
+
+📞 **Labour Helpline:** 1800-11-2345 (Toll-Free)
+📱 **e-Shram Portal:** 14434`,
+    citations: [],
+  },
+};
+
 // ── Main: Generate Local Response ─────────────────────────────────────────────
 
 /**
- * generateLocalResponse(query, retrievedDocs)
+ * generateLocalResponse(query, retrievedDocs, language)
  *
- * Generates a structured, helpful Hindi response using:
+ * Generates a structured, helpful Hindi or English response using:
  *  1. Intent detection on the query
- *  2. Retrieved Elastic documents as additional context
+ *  2. Retrieved Elasticsearch context documents (primary source)
  *  3. Expert knowledge templates
  *
  * @param {string} query — User's original query
  * @param {Array}  retrievedDocs — Hits from Elasticsearch (may be empty)
+ * @param {string} language — 'hi' | 'en'
  * @returns {{ response: string, citations: string[], usedLocalKnowledge: boolean }}
  */
-function generateLocalResponse(query, retrievedDocs = []) {
+function generateLocalResponse(query, retrievedDocs = [], language = 'hi') {
   const intents = detectLocalIntent(query);
   const primaryIntent = intents[0];
-  const kb = KNOWLEDGE[primaryIntent] || KNOWLEDGE.general;
+  
+  const isEn = language === 'en';
+  const sourceKb = isEn ? KNOWLEDGE_EN : KNOWLEDGE;
+  const kb = sourceKb[primaryIntent] || sourceKb.general;
 
   // Build response from knowledge base template
   let response = kb.response;
@@ -427,12 +634,16 @@ function generateLocalResponse(query, retrievedDocs = []) {
       .filter(d => d.content && d.content.length > 50)
       .map(d => {
         const snippet = d.content.substring(0, 300).replace(/\n+/g, ' ').trim();
-        const date = d.effectiveDate ? ` (प्रभावी: ${d.effectiveDate})` : '';
-        return `📌 **${d.shortName ?? d.statute ?? 'Legal Reference'}${date}:** ${snippet}...`;
+        const date = d.effectiveDate ? ` (Effective: ${d.effectiveDate})` : '';
+        const label = isEn ? '📌 Reference' : '📌 संदर्भ';
+        return `${label} **${d.shortName ?? d.statute ?? 'Legal Reference'}${date}:** ${snippet}...`;
       });
 
     if (extras.length > 0) {
-      response += '\n\n---\n**📚 Elastic से प्राप्त जानकारी:**\n' + extras.join('\n\n');
+      const header = isEn 
+        ? '\n\n---\n**📚 Information from Elasticsearch:**\n' 
+        : '\n\n---\n**📚 Elastic से प्राप्त जानकारी:**\n';
+      response += header + extras.join('\n\n');
     }
 
     // Add citations from retrieved docs
@@ -448,4 +659,4 @@ function generateLocalResponse(query, retrievedDocs = []) {
   };
 }
 
-module.exports = { generateLocalResponse, detectLocalIntent, WAGES, KNOWLEDGE };
+module.exports = { generateLocalResponse, detectLocalIntent, WAGES, KNOWLEDGE, KNOWLEDGE_EN };

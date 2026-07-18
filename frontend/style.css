@@ -1115,3 +1115,34 @@ body {
 .wage-badge--compliant { color: var(--green); background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.25); }
 .wage-badge--underpaid { color: var(--red);   background: rgba(239,68,68,.1);  border-color: rgba(239,68,68,.25); }
 
+/* ── Language Selector Segmented Control ─────────────────────── */
+.lang-selector {
+  display: flex;
+  background: var(--bg2);
+  border: 1px solid var(--b2);
+  border-radius: var(--rs);
+  padding: 2px;
+  gap: 2px;
+  align-items: center;
+  margin-right: 14px;
+}
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--t2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.lang-btn:hover {
+  color: var(--t1);
+}
+.lang-btn.active {
+  background: var(--elastic);
+  color: var(--bg0);
+}
+
+

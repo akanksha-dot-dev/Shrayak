@@ -66,12 +66,20 @@ const PERSONAS = {
       'मेरे पास कोई कागज़ नहीं है — क्या मैं शिकायत कर सकता हूं?',
       'मुझे पास का श्रम कार्यालय कहां मिलेगा?',
     ],
+    starterQuestionsEn: [
+      'Should I go to work today? Air pollution in Delhi is very high.',
+      'My contractor pays me ₹700 daily — is this correct?',
+      'How do I register for a BOCW card? What benefits will I get?',
+      'I do not have any written contract — can I still file a complaint?',
+      'Where can I find the nearest Labour Office?',
+    ],
     systemContext: `Worker Profile: Ramesh, a mason from Bihar, working in Delhi construction.
 Category: Skilled (Mason). Entitled to ₹899/day as per Delhi Min. Wage Jul 2026.
 Key concerns: AQI/GRAP halts, BOCW registration, wage theft by contractor.
 IMPORTANT: Always mention GRAP advisory if AQI > 200. Mention BOCW Act protection.
 Always advise: File Form VI with Labour Enforcement Officer for wage complaints.`,
     welcomeMessage: 'नमस्ते रमेश! मैं Shrayak हूं — आपका श्रम अधिकार सहायक। आज दिल्ली की वायु गुणवत्ता और आपके अधिकारों की जानकारी मैं आपको दूंगा।',
+    welcomeMessageEn: 'Namaste Ramesh! I am Shrayak. Today, I will guide you on Delhi\'s air quality and your labor rights as a construction worker.',
   },
 
   // ── PERSONA 2: Domestic Worker ──────────────────────────────────────────────
@@ -104,12 +112,20 @@ Always advise: File Form VI with Labour Enforcement Officer for wage complaints.
       'अगर मालकिन गलत बर्ताव करे तो शिकायत कहां करें?',
       'e-Shram कार्ड बनवाने के लिए क्या चाहिए?',
     ],
+    starterQuestionsEn: [
+      'My employer pays me ₹5000 a month — is this legal?',
+      'I do not get a single rest day in the week — what should I do?',
+      'What are the laws protecting domestic helpers?',
+      'If my employer behaves badly, where should I file a complaint?',
+      'What do I need to register for an e-Shram card?',
+    ],
     systemContext: `Worker Profile: Sita Devi, domestic worker from UP, working in a Delhi household.
 Category: Unskilled. Entitled to minimum ₹743/day (₹19,318/month) as per Jul 2026 notification.
 Key concerns: Written contract, weekly rest, wage calculation, ESI/PF access.
 Important: Domestic workers are covered under Minimum Wages Act. Point to Delhi Domestic Workers policy.
 Always mention: Right to weekly rest under Shops & Establishments Act.`,
     welcomeMessage: 'नमस्ते सीता जी! मैं Shrayak हूं। आपके घरेलू कामगार अधिकारों की जानकारी के लिए मैं यहां हूं।',
+    welcomeMessageEn: 'Namaste Sita Devi! I am Shrayak. I am here to help you understand your rights as a domestic helper.',
   },
 
   // ── PERSONA 3: Garment Worker ──────────────────────────────────────────────
@@ -142,12 +158,20 @@ Always mention: Right to weekly rest under Shops & Establishments Act.`,
       'मातृत्व अवकाश के लिए क्या करना होगा?',
       'अर्ध-कुशल श्रमिक का न्यूनतम वेतन क्या है?',
     ],
+    starterQuestionsEn: [
+      'They make me work 10 hours at the factory — is this legal?',
+      'How much should I be paid for overtime hours?',
+      'ESI is deducted but I cannot get hospital treatments — what to do?',
+      'What is the process to get paid maternity leave?',
+      'What is the official minimum wage for semi-skilled workers?',
+    ],
     systemContext: `Worker Profile: Priya Sharma, garment/tailor worker from Rajasthan, working in Delhi factory.
 Category: Semi-Skilled. Entitled to ₹817/day (₹21,242/month) as per Jul 2026 notification.
 Overtime rate: ₹204.25/hr (double of ₹102.13/hr ordinary rate).
 Key concerns: Overtime pay (Section 14), ESI compliance, maternity leave (Maternity Benefit Act 1961).
 Always mention: Factories Act 1948, Section 51 (max 48hr/week), Section 59 (overtime at 2x).`,
     welcomeMessage: 'नमस्ते प्रिया! मैं Shrayak हूं। आपके कारखाने के अधिकार और वेतन की जानकारी के लिए यहां हूं।',
+    welcomeMessageEn: 'Namaste Priya! I am Shrayak. I am here to help you check your factory worker rights and overtime pay.',
   },
 };
 

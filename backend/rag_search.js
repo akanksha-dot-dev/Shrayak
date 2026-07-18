@@ -458,30 +458,8 @@ async function performRAGSearch(userQuery, options = {}) {
 // ─── SECTION 4: PROMPT BUILDER                                   ─────────────
 // ─── ════════════════════════════════════════════════════════════ ─────────────
 
-// Hardcoded system prompt — cannot be overridden by user input
-const SYSTEM_PROMPT = `You are "Shrayak" (श्रायक), a trusted AI assistant helping migrant workers and daily wage labourers in Delhi understand their legal rights.
-
-YOUR MISSION:
-- Explain labour rights, minimum wages, e-Shram registration, and welfare benefits in simple, plain Hindi.
-- ALWAYS cite the specific law, section number, or notification number from the provided context.
-- Be empathetic, patient, and use simple Hindi (not overly formal/legal language).
-- Always end with the relevant Labour Office helpline number.
-
-STRICT RULES:
-1. ONLY answer questions about labour rights, wages, welfare schemes, and related topics.
-2. NEVER invent statute numbers or wage figures — use ONLY numbers from the provided context.
-3. If the context doesn't answer the question, clearly say so and give the helpline: 1800-11-2345.
-4. Respond PRIMARILY in Hindi. Include statute names and key terms in English too.
-5. Keep responses concise — workers often have low-end phones with limited data.
-6. Cite the effectiveDate of wage data so users know how current the information is.
-
-FORMAT:
-- Use numbered lists where helpful.
-- End with: "📜 कानूनी आधार: [Act Name, Section Number, Notification Date]"
-- End with: "📞 सहायता: 1800-11-2345 (Toll-Free)"`;
-
 /**
- * buildGroundedPrompt(safeQuery, retrievedHits, officeInfo) — Assembles
+ * buildGroundedPrompt(safeQuery, retrievedHits, officeInfo, language) — Assembles
  * the full prompt for Gemini using the retrieved Elastic context.
  *
  * GROUNDING: The LLM only sees wage figures and statute references
@@ -491,9 +469,33 @@ FORMAT:
  * @param {string}  safeQuery    — PII-stripped query
  * @param {Array}   retrievedHits — Top-k documents from Elastic
  * @param {object|null} officeInfo — Nearest Labour Office
+ * @param {string}  language     — 'hi' | 'en'
  * @returns {string} — Full Gemini prompt
  */
-function buildGroundedPrompt(safeQuery, retrievedHits, officeInfo) {
+function buildGroundedPrompt(safeQuery, retrievedHits, officeInfo, language = 'hi') {
+  const isEn = language === 'en';
+
+  const systemPrompt = `You are "Shrayak" (श्रायक), a trusted AI assistant helping migrant workers and daily wage labourers in Delhi understand their legal rights.
+
+YOUR MISSION:
+- Explain labour rights, minimum wages, e-Shram registration, and welfare benefits in simple, plain ${isEn ? 'English' : 'Hindi'}.
+- ALWAYS cite the specific law, section number, or notification number from the provided context.
+- Be empathetic, patient, and use simple language.
+- Always end with the relevant Labour Office helpline number.
+
+STRICT RULES:
+1. ONLY answer questions about labour rights, wages, welfare schemes, and related topics.
+2. NEVER invent statute numbers or wage figures — use ONLY numbers from the provided context.
+3. If the context doesn't answer the question, clearly say so and give the helpline: 1800-11-2345.
+4. Respond PRIMARILY in ${isEn ? 'English' : 'Hindi'}.
+5. Keep responses concise — workers often have low-end phones with limited data.
+6. Cite the effectiveDate of wage data so users know how current the information is.
+
+FORMAT:
+- Use numbered lists where helpful.
+- End with: "${isEn ? '📜 Legal Basis' : '📜 कानूनी आधार'}: [Act Name, Section Number]"
+- End with: "${isEn ? '📞 Helpline' : '📞 सहायता'}: 1800-11-2345 (Toll-Free)"`;
+
   const contextBlocks = retrievedHits
     .map((hit, i) => {
       const dateStr = hit.effectiveDate
@@ -514,13 +516,13 @@ function buildGroundedPrompt(safeQuery, retrievedHits, officeInfo) {
     : '';
 
   return [
-    SYSTEM_PROMPT,
+    systemPrompt,
     '\n\n=== Retrieved Legal Context from Elasticsearch ===\n',
     contextBlocks,
     officeBlock,
     '\n\n=== User Question ===',
     safeQuery,
-    '\n=== Your Answer (Hindi primary, cite statutes) ===',
+    `\n=== Your Answer (${isEn ? 'English primary' : 'Hindi primary'}, cite statutes) ===`,
   ].join('\n');
 }
 
@@ -640,7 +642,8 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
     const prompt = buildGroundedPrompt(
       searchResult.safeQuery,
       searchResult.hits,
-      officeInfo
+      officeInfo,
+      options.language
     );
 
     // ── Stage 7: Gemini Generation ────────────────────────────────────────
@@ -703,7 +706,7 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
         logger.warn('[rag_search] Fallback Elastic search also failed, utilizing cached knowledge base only');
       }
 
-      const localResult = generateLocalResponse(sanitizedQuery, fallbackHits);
+      const localResult = generateLocalResponse(sanitizedQuery, fallbackHits, options.language);
 
       telemetry.latencyTotalMs = Date.now() - totalStart;
       telemetry.success        = true; // Fallback succeeded
@@ -732,7 +735,15 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
 
       // Ultimate hard-coded fallback text so the chat client NEVER breaks
       return {
-        response: `नमस्ते! क्षमा करें, तकनीकी कारणों से मैं अभी ऑनलाइन जवाब नहीं बना पा रहा हूँ।
+        response: options.language === 'en' 
+          ? `Hello! We are currently experiencing technical difficulties generating online responses.
+
+Please contact the following support helplines:
+📞 Delhi Labour Helpline: 1800-11-2345 (Toll-Free)
+📱 e-Shram Helpline: 14434
+
+Please try asking your question again in a moment.`
+          : `नमस्ते! क्षमा करें, तकनीकी कारणों से मैं अभी ऑनलाइन जवाब नहीं बना पा रहा हूँ।
 
 आप निम्नलिखित सहायता माध्यमों से संपर्क कर सकते हैं:
 📞 दिल्ली श्रम हेल्पलाइन: 1800-11-2345 (Toll-Free, निःशुल्क)
@@ -749,16 +760,26 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
 }
 
 /**
- * getFallbackResponse() — Helpful Hindi message when RAG fails.
- *
- * This is the graceful degradation response served when:
- *  - Elasticsearch is not configured
- *  - Gemini is not configured
- *  - Any unrecoverable error in the pipeline
- *
- * @returns {string}
+ * getFallbackResponse(language) — Helpful Hindi/English message when RAG fails.
  */
-function getFallbackResponse() {
+function getFallbackResponse(query, options = {}) {
+  const isEn = (options.language ?? 'hi') === 'en';
+  if (isEn) {
+    return `Hello! I am Shrayak — your AI assistant for daily wage and construction workers in Delhi.
+
+I can assist you with:
+1. 💰 Minimum Wages (Minimum Wages) — October 2026 rates
+2. 📋 e-Shram Portal (e-Shram Registration)
+3. ⚖️ Labour Laws & Rights (Labour Laws & Rights)
+4. 🏛️ Location Search (Nearest Labour Office via geo_distance)
+5. 🏗️ BOCW, ESI, PF benefits (Construction & Social Security Benefits)
+
+Please type your question in English or Hindi below.
+
+📞 Helpline: 1800-11-2345 (Toll-Free)
+📱 e-Shram: 14434`;
+  }
+
   return `नमस्ते! मैं श्रायक हूँ — दिल्ली के मजदूरों का AI सहायक।
 
 मैं आपकी इन विषयों में मदद कर सकता हूँ:
