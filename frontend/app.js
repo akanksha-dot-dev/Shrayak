@@ -169,6 +169,9 @@ const Personas = {
     if (!p) return;
     state.persona = p;
 
+    // Clear previous conversation
+    D.messages.innerHTML = '';
+
     // Card states
     document.querySelectorAll('.persona-card').forEach(c => c.classList.remove('active'));
     const el = document.getElementById(`pc-${id}`);
