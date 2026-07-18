@@ -562,6 +562,7 @@ function buildGroundedPrompt(safeQuery, retrievedHits, officeInfo) {
 async function buildRAGResponse(sanitizedQuery, options = {}) {
   const requestId  = uuidv4();
   const totalStart = Date.now();
+  let officeInfo = null;
 
   // Telemetry accumulator (built up through pipeline stages)
   const telemetry = {
@@ -626,7 +627,6 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
     });
 
     // ── Stage 5: Office Routing ──────────────────────────────────────────
-    let officeInfo = null;
     if (options.pinCode) {
       officeInfo = getOfficeByPin(options.pinCode);
     } else if (options.district) {
