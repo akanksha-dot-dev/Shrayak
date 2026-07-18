@@ -176,12 +176,7 @@ const Personas = {
     // Welcome message
     addBotMsg(p.welcomeMessage, [], null, true);
 
-    // AQI advisory
-    if (p.aqiSensitive && state.aqiData) {
-      AQI.showGRAPBanner(state.aqiData, p);
-    } else {
-      hideGRAP();
-    }
+
 
     // Close mobile sidebar
     D.sidebar.classList.remove('open');
@@ -203,72 +198,82 @@ const Personas = {
 };
 
 // ══════════════════════════════════════════════════════════════════
-// AQI MANAGER
+// WORKER REGISTRY MANAGER
 // ══════════════════════════════════════════════════════════════════
-const AQI = {
-  async init() {
-    await this.fetch();
-    setInterval(() => this.fetch(), 10 * 60 * 1000);
-  },
-
-  async fetch() {
-    try {
-      const r = await fetch(`${API}/api/aqi`);
-      const d = await r.json();
-      state.aqiData = d;
-      this.render(d);
-    } catch { /* keep last state */ }
-  },
-
-  render(d) {
-    if (!d) return;
-    const aqi   = d.aqi   ?? 0;
-    const color = d.color ?? '#10b981';
-    const grap  = d.grapLabel ?? 'Good';
-    const emoji = d.emoji ?? '🟢';
-
-    // Topbar pill
-    D.aqiPillDot.style.background  = color;
-    D.aqiPillDot.style.boxShadow   = `0 0 8px ${color}80`;
-    D.aqiPillNum.textContent        = aqi > 0 ? aqi : '--';
-    D.aqiPillNum.style.color        = color;
-    D.aqiPillStage.textContent      = `${emoji} ${grap}`;
-
-    // Sidebar ring gauge (SVG)
-    // circumference of r=50: 2π×50 ≈ 314.16
-    const CIRC = 314;
-    const pct    = Math.min(aqi / 500, 1);
-    const offset = CIRC * (1 - pct);
-    D.ringFill.setAttribute('stroke-dashoffset', String(offset));
-    D.ringFill.setAttribute('stroke', color);
-    D.gaugeNum.textContent = aqi > 0 ? aqi : '--';
-    D.gaugeNum.style.color = color;
-
-    // Details
-    D.grapStage.textContent  = `Stage ${d.grapStage ?? 0} — ${grap}`;
-    D.grapStage.style.color  = color;
-    D.aqiSource.textContent  = d.live ? `🔴 LIVE · ${d.station ?? 'ITO'}` : `⚪ ${d.source ?? 'Simulated'}`;
-    D.constrStatus.textContent = d.constructionStop ? '🚫 HALTED (GRAP)' : '✅ Permitted';
-    D.constrStatus.style.color = d.constructionStop ? 'var(--red)' : 'var(--green)';
-
-    // Advisory
-    D.aqiAdvisory.textContent   = d.advisoryHi ?? d.advisoryEn ?? 'Advisory unavailable.';
-    D.aqiAdvBox.style.borderTopColor = color + '30';
-
-    // GRAP banner
-    if (state.persona?.aqiSensitive) this.showGRAPBanner(d, state.persona);
-  },
-
-  showGRAPBanner(d, persona) {
-    if (!d || !persona?.aqiSensitive || !d.constructionStop || d.grapStage < 2) {
-      hideGRAP(); return;
+const WorkerRegistry = {
+  async search(query) {
+    if (!query) {
+      this.error('Please enter a name or UAN code');
+      return;
     }
-    D.grapEmoji.textContent = d.emoji ?? '🚨';
-    D.grapTitle.textContent = `GRAP ${d.grapLabel} — Delhi AQI ${d.aqi}`;
-    D.grapMsg.textContent   = d.advisoryHi;
-    D.grapBanner.style.background = `linear-gradient(135deg,${d.color}cc 0%,#c2002e 100%)`;
-    D.grapBanner.classList.add('visible');
+    this.loading(true);
+    try {
+      const r = await fetch(`${API}/api/workers?q=${encodeURIComponent(query)}`);
+      const d = await r.json();
+      if (!r.ok) { this.error(d.error ?? 'Search failed'); return; }
+      this.render(d.workers ?? []);
+    } catch {
+      this.error('Network error — please try again');
+    } finally {
+      this.loading(false);
+    }
   },
+
+  render(workers) {
+    if (!workers.length) {
+      D.workerResult.innerHTML = `
+        <div class="geo-empty">
+          <div class="geo-empty-icon">❓</div>
+          <p>No worker matches found</p>
+        </div>`;
+      return;
+    }
+    D.workerResult.innerHTML = workers.map(w => {
+      let minRate = 743;
+      if (w.skillCategory === 'semi-skilled') minRate = 817;
+      if (w.skillCategory === 'skilled') minRate = 899;
+
+      const isCompliant = w.dailyWagePaid >= minRate;
+      const statusBadge = isCompliant 
+        ? `<span class="geo-dist-badge" style="color:var(--green); background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25)">🟢 Compliant</span>`
+        : `<span class="geo-dist-badge" style="color:var(--red); background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.25)">🔴 Underpaid</span>`;
+
+      return `
+        <div class="geo-office-card" style="border-color:${isCompliant ? 'var(--b2)' : 'var(--red)25'}">
+          <div class="geo-rank-row">
+            <span class="geo-rank-label">${esc(w.skillCategory.toUpperCase())}</span>
+            ${statusBadge}
+          </div>
+          <div class="geo-office-name">${esc(w.nameHindi)} (${esc(w.name)})</div>
+          <div class="geo-detail"><strong>UAN:</strong> ${esc(w.uan)}</div>
+          <div class="geo-detail"><strong>Occupation:</strong> ${esc(w.occupationHindi)}</div>
+          <div class="geo-detail"><strong>Daily Wage:</strong> ₹${w.dailyWagePaid}/day (Min: ₹${minRate})</div>
+          <div class="geo-detail"><strong>Employer:</strong> ${esc(w.currentEmployer)}</div>
+          <div class="geo-detail"><strong>BOCW Registered:</strong> ${w.bocwRegistered ? '✅ Yes' : '❌ No'}</div>
+          <div class="geo-detail"><strong>State of Origin:</strong> ${esc(w.stateOfOriginHindi)}</div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  loading(on) {
+    D.workerBtn.disabled = on;
+    if (on) {
+      D.workerResult.innerHTML = `
+        <div class="geo-empty">
+          <div class="geo-empty-icon">🔍</div>
+          <p>Searching eShram index...</p>
+        </div>`;
+    }
+  },
+
+  error(msg) {
+    D.workerResult.innerHTML = `
+      <div class="geo-empty">
+        <div class="geo-empty-icon">⚠️</div>
+        <p style="color:var(--red)">${esc(msg)}</p>
+      </div>`;
+  }
 };
 
 function hideGRAP() {
