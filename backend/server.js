@@ -82,13 +82,13 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for inline scripts in frontend
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        frameSrc: ["'none'"],
-        objectSrc: ["'none'"],
+        scriptSrc:  ["'self'", "'unsafe-inline'"],
+        styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc:     ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'", 'https://fonts.googleapis.com'],
+        frameSrc:   ["'none'"],
+        objectSrc:  ["'none'"],
         upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
       },
     },
@@ -209,11 +209,10 @@ app.use((req, res, next) => {
 app.use(
   express.static(path.join(__dirname, '..', 'frontend'), {
     index: 'index.html',
-    // Aggressive caching for immutable assets
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-      }
+    // No caching in dev — ensures fresh CSS/JS always loaded
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
     },
   })
 );
