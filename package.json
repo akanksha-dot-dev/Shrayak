@@ -1,0 +1,49 @@
+{
+  "name": "shrayak-shramik-sahayak",
+  "version": "1.0.0",
+  "description": "Shrayak: Shramik Sahayak — Delhi Migrant Worker & Labour Rights AI Agent",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "seed": "node backend/dataIngestion.js",
+    "seed:wages": "node backend/dataIngestion.js",
+    "seed:full": "node backend/ingest_wages.js",
+    "ping": "node -e \"require('dotenv').config();const{checkElasticHealth}=require('./backend/elasticConfig');checkElasticHealth().then(r=>console.log(JSON.stringify(r,null,2)));\"",
+    "lint": "eslint backend/ --ext .js",
+    "test": "echo \"Tests: see README for curl-based verification\" && exit 0"
+  },
+  "keywords": [
+    "elastic",
+    "rag",
+    "labour-rights",
+    "delhi",
+    "hindi",
+    "gemini",
+    "migrant-workers"
+  ],
+  "author": "Shrayak Team — Build With AI Elastic x GDG Cloud New Delhi Buildathon",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@elastic/ecs-winston-format": "^1.5.0",
+    "@elastic/elasticsearch": "^8.13.0",
+    "@elastic/elasticsearch-serverless": "^0.10.0",
+    "@google/generative-ai": "^0.15.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "uuid": "^10.0.0",
+    "winston": "^3.13.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "eslint": "^9.5.0",
+    "nodemon": "^3.1.3"
+  }
+}

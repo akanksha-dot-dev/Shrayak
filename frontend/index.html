@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="hi" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Shrayak (श्रायक) — दिल्ली के मजदूरों का AI सहायक। न्यूनतम वेतन, ई-श्रम पंजीकरण, और श्रम अधिकारों की जानकारी हिंदी में पाएं। AI assistant for Delhi migrant workers — minimum wages, e-Shram, labour rights." />
+  <meta name="keywords" content="shrayak, shramik sahayak, delhi labour rights, minimum wage, eshram, migrant worker, मजदूर, श्रमिक, न्यूनतम वेतन, ई-श्रम" />
+  <meta name="author" content="Shrayak Team — Build With AI Buildathon" />
+  <meta name="theme-color" content="#1a2332" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Shrayak — Delhi Migrant Worker Rights Agent" />
+  <meta property="og:description" content="AI-powered agent explaining labour rights in plain Hindi. Powered by Elastic RAG + Gemini." />
+  <meta property="og:type" content="website" />
+
+  <!-- PWA / Mobile -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <title>Shrayak — श्रायक | दिल्ली मजदूर अधिकार सहायक</title>
+
+  <!-- Google Fonts: Noto Sans Devanagari for Hindi + Inter for UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ══════════════════════════════════════════════════════════
+       APP CONTAINER — Flex row on desktop (sidebar + chat-column)
+       ══════════════════════════════════════════════════════════ -->
+  <div id="app" class="app-container" role="main">
+
+    <!-- ════════════════════════════════════════════════════════
+         LEFT SIDEBAR — Desktop only (hidden on mobile via CSS)
+         ════════════════════════════════════════════════════════ -->
+    <aside class="sidebar" aria-label="Shrayak sidebar navigation">
+
+      <!-- Brand / Logo -->
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon" aria-hidden="true">⚖️</div>
+          <div class="sidebar-logo-text">
+            <div class="sidebar-app-name">श्र<span>ायक</span></div>
+            <div class="sidebar-app-subtitle">Shramik Sahayak</div>
+          </div>
+        </div>
+        <p class="sidebar-tagline">दिल्ली के मजदूरों का AI कानूनी सहायक — Migrant Worker Rights Agent</p>
+        <div class="elastic-badge" aria-label="Powered by Elastic Cloud">
+          <span class="elastic-dot" aria-hidden="true"></span>
+          Elastic Cloud Serverless · RAG
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="sidebar-stats" aria-label="Quick statistics">
+        <div class="stat-card">
+          <span class="stat-value">₹743</span>
+          <span class="stat-label">Unskilled/day</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">₹899</span>
+          <span class="stat-label">Skilled/day</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">5+</span>
+          <span class="stat-label">Laws Indexed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">RAG</span>
+          <span class="stat-label">Elastic Search</span>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav" aria-label="Quick topics">
+        <div class="sidebar-nav-label">विषय / Topics</div>
+
+        <button class="sidebar-nav-btn active" data-chat-query="दिल्ली में न्यूनतम वेतन कितना है?" aria-label="Minimum wage information">
+          <span class="sidebar-nav-icon">💰</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">न्यूनतम वेतन</span>
+            <span class="sidebar-nav-sub">Minimum Wages 2026</span>
+          </span>
+        </button>
+
+        <button class="sidebar-nav-btn" data-chat-query="ई-श्रम पंजीकरण कैसे करें? क्या फायदे हैं?" aria-label="e-Shram registration">
+          <span class="sidebar-nav-icon">📋</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">ई-श्रम पंजीकरण</span>
+            <span class="sidebar-nav-sub">e-Shram Registration</span>
+          </span>
+        </button>
+
+        <button class="sidebar-nav-btn" data-chat-query="प्रवासी मजदूर के क्या कानूनी अधिकार हैं?" aria-label="Migrant worker rights">
+          <span class="sidebar-nav-icon">⚖️</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">मजदूर अधिकार</span>
+            <span class="sidebar-nav-sub">Labour Rights & ISMW Act</span>
+          </span>
+        </button>
+
+        <button class="sidebar-nav-btn" data-chat-query="ओवरटाइम के लिए कितना पैसा मिलना चाहिए? कानून क्या कहता है?" aria-label="Overtime rules">
+          <span class="sidebar-nav-icon">⏰</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">ओवरटाइम</span>
+            <span class="sidebar-nav-sub">Overtime Pay Rules</span>
+          </span>
+        </button>
+
+        <button class="sidebar-nav-btn" data-chat-query="BOCW योजना के क्या लाभ हैं? कैसे पंजीकरण करें?" aria-label="BOCW benefits">
+          <span class="sidebar-nav-icon">🏗️</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">BOCW लाभ</span>
+            <span class="sidebar-nav-sub">Construction Worker Benefits</span>
+          </span>
+        </button>
+
+        <button class="sidebar-nav-btn" data-chat-query="श्रम विभाग में शिकायत कैसे दर्ज करें?" aria-label="File complaint">
+          <span class="sidebar-nav-icon">📢</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">शिकायत दर्ज करें</span>
+            <span class="sidebar-nav-sub">File Labour Complaint</span>
+          </span>
+        </button>
+
+        <div class="sidebar-nav-label">कार्यालय / Offices</div>
+
+        <button class="sidebar-nav-btn" data-chat-query="मेरे नजदीक श्रम कार्यालय कहाँ है?" aria-label="Find nearest labour office">
+          <span class="sidebar-nav-icon">🏛️</span>
+          <span class="sidebar-nav-text">
+            <span class="sidebar-nav-title">नजदीकी कार्यालय</span>
+            <span class="sidebar-nav-sub">Nearest Labour Office</span>
+          </span>
+        </button>
+      </nav>
+
+      <!-- Wage Quick Reference -->
+      <div class="sidebar-wages">
+        <div class="wage-ref-title">Jul 2026 Delhi Wages</div>
+        <div class="wage-ref-grid">
+          <div class="wage-ref-row">
+            <span class="wage-ref-cat">अकुशल / Unskilled</span>
+            <span class="wage-ref-amount">₹743/day</span>
+          </div>
+          <div class="wage-ref-row">
+            <span class="wage-ref-cat">अर्ध-कुशल / Semi-Skilled</span>
+            <span class="wage-ref-amount">₹817/day</span>
+          </div>
+          <div class="wage-ref-row">
+            <span class="wage-ref-cat">कुशल / Skilled</span>
+            <span class="wage-ref-amount">₹899/day</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Helpline Footer -->
+      <div class="sidebar-footer">
+        <a href="tel:18001112345" class="sidebar-helpline" aria-label="Call Labour helpline 1800 11 2345">
+          <span class="helpline-icon">📞</span>
+          <span class="helpline-info">
+            <span class="helpline-number">1800-11-2345</span>
+            <span class="helpline-desc">Labour Helpline · Toll-Free · निःशुल्क</span>
+          </span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════════
+         RIGHT CHAT COLUMN — Full width on mobile, flex:1 on desktop
+         ════════════════════════════════════════════════════════ -->
+    <div class="chat-column">
+
+      <!-- ── Header ──────────────────────────────────────────────── -->
+      <header class="chat-header" role="banner">
+        <div class="header-left">
+          <div class="agent-avatar" aria-hidden="true">
+            <span class="avatar-emoji">⚖️</span>
+            <div class="status-dot" id="status-dot" aria-hidden="true"></div>
+          </div>
+          <div class="agent-info">
+            <h1 class="agent-name">श्रायक <span class="name-en">Shrayak</span></h1>
+            <p class="agent-subtitle" id="agent-subtitle">दिल्ली मजदूर अधिकार सहायक</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <button id="lang-toggle" class="lang-toggle-btn" aria-label="Toggle language" title="Switch Language / भाषा बदलें">
+            <span id="lang-label">EN</span>
+          </button>
+          <button id="info-btn" class="icon-btn" aria-label="About Shrayak" title="About / जानकारी">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- ── Location Bar ─────────────────────────────────────────── -->
+      <div class="location-bar" id="location-bar">
+        <div class="location-inner">
+          <span class="location-icon" aria-hidden="true">📍</span>
+          <select id="district-select" class="district-select" aria-label="Select your Delhi district">
+            <option value="">अपना जिला चुनें / Select your district</option>
+            <option value="110001">मध्य दिल्ली / Central Delhi (110001)</option>
+            <option value="110024">दक्षिण दिल्ली / South Delhi (110024)</option>
+            <option value="110007">उत्तर दिल्ली / North Delhi (110007)</option>
+            <option value="110091">पूर्वी दिल्ली / East Delhi (110091)</option>
+            <option value="110058">पश्चिम दिल्ली / West Delhi (110058)</option>
+            <option value="110085">उत्तर पश्चिम दिल्ली / North West Delhi (110085)</option>
+            <option value="110076">दक्षिण पूर्वी दिल्ली / South East Delhi (110076)</option>
+            <option value="110075">दक्षिण पश्चिम दिल्ली / South West Delhi (110075)</option>
+          </select>
+          <div class="location-label" id="selected-location-label"></div>
+        </div>
+      </div>
+
+      <!-- ── Chips / Quick Questions ──────────────────────────────── -->
+      <div class="chips-container" id="chips-container" role="listbox" aria-label="Quick question suggestions">
+        <button class="chip" data-query="मेरा न्यूनतम वेतन कितना होना चाहिए?" role="option">💰 न्यूनतम वेतन</button>
+        <button class="chip" data-query="ई-श्रम पंजीकरण कैसे करें?" role="option">📋 ई-श्रम</button>
+        <button class="chip" data-query="प्रवासी मजदूर के क्या अधिकार हैं?" role="option">⚖️ मजदूर अधिकार</button>
+        <button class="chip" data-query="ओवरटाइम के लिए कितना पैसा मिलना चाहिए?" role="option">⏰ ओवरटाइम</button>
+        <button class="chip" data-query="BOCW योजना के क्या लाभ हैं?" role="option">🏗️ BOCW लाभ</button>
+        <button class="chip" data-query="शिकायत कहाँ दर्ज करें?" role="option">📢 शिकायत</button>
+      </div>
+
+      <!-- ── Chat Messages Area ───────────────────────────────────── -->
+      <main class="chat-window" id="chat-window" role="log" aria-live="polite" aria-label="Chat messages">
+        <!-- Welcome message is injected by app.js -->
+      </main>
+
+      <!-- ── Input Area ───────────────────────────────────────────── -->
+      <footer class="chat-input-area" role="contentinfo">
+        <form class="input-form" id="chat-form" autocomplete="off" novalidate>
+          <div class="input-wrapper">
+            <label for="query-input" class="sr-only">अपना प्रश्न यहाँ लिखें / Type your question here</label>
+            <textarea
+              id="query-input"
+              name="query"
+              class="query-input"
+              placeholder="अपना सवाल हिंदी में लिखें... / Type your question..."
+              rows="1"
+              maxlength="2000"
+              aria-label="Your question in Hindi or English"
+              aria-describedby="char-counter"
+              spellcheck="true"
+              lang="hi"
+            ></textarea>
+            <div class="input-actions">
+              <span id="char-counter" class="char-counter" aria-live="polite">0/2000</span>
+              <button type="submit" id="send-btn" class="send-btn" aria-label="Send message / भेजें" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+        <div class="footer-note">
+          <span class="footer-text">🔒 सुरक्षित | Powered by Elastic RAG + Gemini</span>
+          <a href="tel:18001112345" class="helpline-link" id="helpline-link">📞 1800-11-2345</a>
+        </div>
+      </footer>
+
+    </div><!-- /.chat-column -->
+
+  </div><!-- /#app -->
+
+  <!-- ── About Modal ─────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal" id="about-modal">
+      <button class="modal-close" id="modal-close" aria-label="Close modal">✕</button>
+      <div class="modal-header">
+        <div class="modal-icon" aria-hidden="true">⚖️</div>
+        <h2 id="modal-title" class="modal-title">श्रायक के बारे में</h2>
+        <p class="modal-subtitle">About Shrayak</p>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h3>यह क्या करता है?</h3>
+          <p>श्रायक एक AI सहायक है जो दिल्ली के प्रवासी मजदूरों और दिहाड़ी श्रमिकों को उनके कानूनी अधिकारों के बारे में सरल हिंदी में जानकारी देता है।</p>
+          <p><em>Shrayak is an AI agent that explains labour rights, minimum wages, e-Shram, and welfare benefits to Delhi migrant workers in plain Hindi.</em></p>
+        </div>
+        <div class="modal-section">
+          <h3>तकनीक / Technology</h3>
+          <ul class="tech-list">
+            <li>🔍 <strong>Elastic Cloud</strong> — RAG Vector Search</li>
+            <li>🧠 <strong>Google Gemini</strong> — AI Reasoning</li>
+            <li>📜 <strong>Real Legal Data</strong> — Minimum Wages Act, ISMW Act, BOCW Act</li>
+            <li>🔒 <strong>Zero-Trust Security</strong> — PII stripped, rate-limited</li>
+          </ul>
+        </div>
+        <div class="modal-section warning-section">
+          <h3>⚠️ महत्वपूर्ण</h3>
+          <p>यह कानूनी सलाह नहीं है। गंभीर मामलों के लिए कृपया श्रम कार्यालय या वकील से संपर्क करें।</p>
+          <p><em>This is not legal advice. For serious matters, contact the Labour Office or a lawyer.</em></p>
+        </div>
+        <div class="modal-helplines">
+          <h3>मुख्य हेल्पलाइन</h3>
+          <a href="tel:18001112345" class="helpline-card">📞 1800-11-2345 — Labour Dept (Toll-Free)</a>
+          <a href="tel:14434" class="helpline-card">📞 14434 — e-Shram Helpline</a>
+          <a href="tel:1098" class="helpline-card">📞 1098 — Childline</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Office Card Modal -->
+  <div class="modal-overlay" id="office-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="office-modal-title" hidden>
+    <div class="modal" id="office-modal">
+      <button class="modal-close" id="office-modal-close" aria-label="Close office details">✕</button>
+      <div id="office-modal-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

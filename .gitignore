@@ -1,0 +1,94 @@
+# ============================================================
+# Shrayak: Shramik Sahayak — .gitignore
+# ============================================================
+#
+# SECURITY MANDATE (Zero-Trust Model):
+#   The most critical security rule in any cloud-connected project:
+#   NEVER commit credentials, secrets, or PII to version control.
+#
+#   Git history is permanent. Even if a secret is deleted in a
+#   later commit, it remains accessible via `git log`. Services
+#   like GitHub Secret Scanning actively scan push history for
+#   exposed API keys and alert the provider (Elastic, Google, etc.)
+#   to revoke them automatically.
+#
+# This file explicitly blocks every category of sensitive data.
+# ============================================================
+
+# ── CRITICAL: Environment Variables / Secrets ──────────────────
+# The .env file contains all API keys, Cloud IDs, and credentials.
+# It MUST NEVER be committed. This rule is non-negotiable.
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.staging
+api-key.txt
+
+# Allow only the template (no actual values inside)
+!.env.example
+
+# ── Node.js ───────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+package-lock.json.bak
+
+# ── Build / Dist ──────────────────────────────────────────────
+dist/
+build/
+.output/
+out/
+
+# ── Logs (may contain PII or stack traces) ────────────────────
+logs/
+*.log
+*.log.*
+pids/
+*.pid
+*.seed
+
+# ── OS Artifacts ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# ── IDE / Editor ──────────────────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.bak
+
+# ── Security: TLS Certificates & Keys ─────────────────────────
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+ssl/
+
+# ── Test Artifacts ────────────────────────────────────────────
+coverage/
+.nyc_output/
+junit.xml
+
+# ── Gemini AI / Elastic SDKs cache ────────────────────────────
+.cache/
+.temp/
+tmp/
+temp/
