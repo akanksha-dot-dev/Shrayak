@@ -1,961 +1,661 @@
 /**
- * ============================================================
- * app.js — Shrayak: Shramik Sahayak
- * Frontend Application Logic
- * ============================================================
- *
- * JUDGE EVALUATION FEATURES IMPLEMENTED:
- *
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  1. DEMO_QUALITY — PERSONA_UI                              ║
- * ║     PersonaManager: loads /api/personas, renders cards,    ║
- * ║     switches context, shows starter questions, adapts      ║
- * ║     chat tone and AQI advisory per persona.                ║
- * ╠══════════════════════════════════════════════════════════════╣
- * ║  2. REAL_TIME_DATA — AQI + GRAP                           ║
- * ║     AQIManager: polls /api/aqi every 10 minutes, updates  ║
- * ║     the live gauge, shows GRAP banner for construction     ║
- * ║     persona when AQI > 300.                               ║
- * ╠══════════════════════════════════════════════════════════════╣
- * ║  3. ELASTIC_GEOSPATIAL — Nearest Office                   ║
- * ║     GeoManager: calls /api/offices/geo?pin=XXXXXX which   ║
- * ║     executes geo_distance Elastic query. Shows office      ║
- * ║     cards with exact km distance from Elastic.            ║
- * ╠══════════════════════════════════════════════════════════════╣
- * ║  4. SECURITY — Client-side Zero-Trust                     ║
- * ║     - Input validation + length limits before sending     ║
- * ║     - Rate limit backoff handling (429 responses)         ║
- * ║     - Sanitizes rendered HTML to prevent XSS             ║
- * ║     - Shows security status from /api/stats               ║
- * ╚══════════════════════════════════════════════════════════════╝
+ * Shrayak — app.js
+ * Professional Frontend Application Logic
  */
-
 'use strict';
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 1: CONFIGURATION & STATE
-// ════════════════════════════════════════════════════════════════════
-
-const API_BASE = '';  // Same origin — Express serves both API and frontend
+// ══════════════════════════════════════════════════════════════════
+// STATE & CONFIG
+// ══════════════════════════════════════════════════════════════════
+const API = '';
 
 const state = {
-  activePersona:    null,    // Current persona object
-  aqiData:          null,    // Latest AQI advisory from /api/aqi
-  isLoading:        false,   // Chat request in flight
-  rateLimitedUntil: 0,       // Timestamp when rate limit expires
-  messageCount:     0,       // Total messages sent this session
+  persona:          null,
+  aqiData:          null,
+  loading:          false,
+  rateLimitedUntil: 0,
 };
 
-// AQI refresh interval (10 minutes — matches server cache)
-let aqiRefreshInterval = null;
-// Stats refresh interval (30 seconds)
-let statsRefreshInterval = null;
+// ══════════════════════════════════════════════════════════════════
+// DOM — resolved after DOMContentLoaded
+// ══════════════════════════════════════════════════════════════════
+let D = {};
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 2: DOM REFERENCES
-// ════════════════════════════════════════════════════════════════════
+function resolveDOM() {
+  const g = id => document.getElementById(id);
+  D = {
+    // GRAP banner
+    grapBanner:   g('grap-banner'),
+    grapEmoji:    g('grap-emoji'),
+    grapTitle:    g('grap-title'),
+    grapMsg:      g('grap-message'),
+    grapDismiss:  g('grap-dismiss'),
+    // Sidebar persona
+    personaCards: g('persona-cards'),
+    // AQI
+    aiqPillDot:   g('aqi-dot'),
+    aqiPillNum:   g('aqi-value'),
+    aqiPillStage: g('aqi-grap'),
+    gaugeNum:     g('gauge-number'),
+    ringFill:     g('aqi-ring-fill'),
+    grapStage:    g('grap-stage-label'),
+    aqiSource:    g('aqi-source'),
+    constrStatus: g('construction-status'),
+    aqiAdvisory:  g('aqi-advisory-text'),
+    aqiAdvBox:    g('aqi-advisory-box'),
+    // Geo
+    pinInput:     g('pin-input'),
+    pinBtn:       g('pin-search-btn'),
+    geoResult:    g('geo-result'),
+    // Security
+    telemDot:     g('telem-dot'),
+    telemStatus:  g('telemetry-status'),
+    statTotal:    g('stat-total'),
+    statPII:      g('stat-pii'),
+    statLatency:  g('stat-latency'),
+    statSuccess:  g('stat-success'),
+    // Chat
+    chatAvatar:   g('chat-avatar'),
+    chatName:     g('chat-persona-name'),
+    chatSub:      g('chat-persona-sub'),
+    starters:     g('starter-questions'),
+    messages:     g('chat-messages'),
+    chatInput:    g('chat-input'),
+    charCount:    g('char-count'),
+    sendBtn:      g('send-btn'),
+    // Elastic
+    elasticDot:   g('elastic-dot'),
+    // Mobile
+    menuBtn:      g('mobile-menu-btn'),
+    sidebar:      document.querySelector('.sidebar'),
+    sbOverlay:    g('sb-overlay'),
+    // Toast
+    toast:        g('toast'),
+  };
+}
 
-const $ = id => document.getElementById(id);
+// ══════════════════════════════════════════════════════════════════
+// UTILITY
+// ══════════════════════════════════════════════════════════════════
+function esc(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str ?? '')));
+  return d.innerHTML;
+}
 
-const DOM = {
-  // Header
-  aqiValue:      $('aqi-value'),
-  aqiDot:        $('aqi-dot'),
-  aqiGrap:       $('aqi-grap'),
-  elasticStatus: $('elastic-status'),
-  elasticDot:    $('elastic-dot'),
+function fmt(text) {
+  if (!text) return '';
+  let s = esc(text);
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\n/g, '<br>');
+  s = s.replace(/(^|<br>)\s*[-•]\s+/g, '$1&nbsp;&nbsp;• ');
+  return s;
+}
 
-  // GRAP Banner
-  grapBanner:    $('grap-banner'),
-  grapEmoji:     $('grap-emoji'),
-  grapTitle:     $('grap-title'),
-  grapMessage:   $('grap-message'),
-  grapDismiss:   $('grap-dismiss'),
+function now() {
+  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
 
-  // Sidebar
-  personaCards:  $('persona-cards'),
-  aqiGaugeNum:   $('gauge-number'),
-  aqiGaugeSvg:   $('aqi-gauge'),
-  grapStageLabel:$('grap-stage-label'),
-  aqiSourceEl:   $('aqi-source'),
-  constructionEl:$('construction-status'),
-  advisoryBox:   $('aqi-advisory-box'),
-  advisoryText:  $('aqi-advisory-text'),
+let _toastTimer;
+function toast(msg) {
+  D.toast.textContent = msg;
+  D.toast.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => D.toast.classList.remove('show'), 3200);
+}
 
-  // Geo search
-  pinInput:      $('pin-input'),
-  pinSearchBtn:  $('pin-search-btn'),
-  geoResult:     $('geo-result'),
+function scrollBottom() {
+  requestAnimationFrame(() => { D.messages.scrollTop = D.messages.scrollHeight; });
+}
 
-  // Security stats
-  telemetryStatus: $('telemetry-status'),
-  statTotal:     $('stat-total'),
-  statPII:       $('stat-pii'),
-  statLatency:   $('stat-latency'),
-  statSuccess:   $('stat-success'),
+function autoResize() {
+  D.chatInput.style.height = 'auto';
+  D.chatInput.style.height = Math.min(D.chatInput.scrollHeight, 140) + 'px';
+}
 
-  // Chat
-  chatPersonaBar:$('chat-persona-bar'),
-  chatAvatar:    $('chat-avatar'),
-  chatName:      $('chat-persona-name'),
-  chatSub:       $('chat-persona-sub'),
-  starterQs:     $('starter-questions'),
-  messages:      $('chat-messages'),
-  chatInput:     $('chat-input'),
-  sendBtn:       $('send-btn'),
-  charCount:     $('char-count'),
-
-  // Misc
-  mobileMenuBtn: $('mobile-menu-btn'),
-  sidebar:       document.querySelector('.sidebar'),
-  toast:         $('toast'),
-};
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 3: PERSONA MANAGER
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: DEMO_QUALITY — PERSONA_UI               ║
- * ║  Fetches personas from /api/personas and renders cards.    ║
- * ║  Selecting a persona changes: chat context, system prompt, ║
- * ║  starter questions, AQI advisory activation, and welcome.  ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-const PersonaManager = {
-  personas: [],
+// ══════════════════════════════════════════════════════════════════
+// PERSONA MANAGER
+// ══════════════════════════════════════════════════════════════════
+const Personas = {
+  list: [],
 
   async init() {
     try {
-      const res  = await fetch(`${API_BASE}/api/personas`);
-      const data = await res.json();
-      this.personas = data.personas ?? [];
-      this.render();
-    } catch (err) {
-      console.error('[PersonaManager] Failed to load personas:', err);
-      // Render fallback inline
-      this.personas = getFallbackPersonas();
-      this.render();
+      const r = await fetch(`${API}/api/personas`);
+      const j = await r.json();
+      this.list = j.personas ?? [];
+    } catch {
+      this.list = fallbackPersonas();
     }
+    this.render();
   },
 
   render() {
-    const container = DOM.personaCards;
-    container.innerHTML = '';
-
-    this.personas.forEach(persona => {
+    D.personaCards.innerHTML = '';
+    this.list.forEach(p => {
       const card = document.createElement('div');
       card.className = 'persona-card';
-      card.id = `persona-${persona.id}`;
-      card.style.setProperty('--persona-color', persona.color);
+      card.id = `pc-${p.id}`;
+      card.tabIndex = 0;
       card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', `Select ${persona.name} persona`);
+      card.setAttribute('aria-label', `Select ${p.name}`);
+      card.style.setProperty('--p-color', p.color);
 
+      // derive pill style from color
+      const hex = p.color;
       card.innerHTML = `
-        <div class="persona-avatar">${persona.avatar}</div>
-        <div class="persona-meta">
-          <div class="persona-name">${escapeHtml(persona.name)}</div>
-          <div class="persona-name-hi">${escapeHtml(persona.nameHindi)}</div>
-          <div class="persona-job">${escapeHtml(persona.occupation)}</div>
+        <div class="persona-avi">${p.avatar}</div>
+        <div class="persona-info">
+          <div class="persona-name">${esc(p.name)}</div>
+          <div class="persona-name-hi">${esc(p.nameHindi)}</div>
+          <div class="persona-job">${esc(p.occupation)}</div>
         </div>
-        <div class="persona-tag" style="background:${persona.color}22;color:${persona.color};border-color:${persona.color}44">
-          ${persona.aqiSensitive ? '🌫️ AQI' : persona.geoFocused ? '📍 Geo' : '⏱️ OT'}
-        </div>
+        <div class="persona-pill" style="
+          background:${hex}18;
+          color:${hex};
+          border-color:${hex}30;
+        ">${p.aqiSensitive ? '🌫️ AQI' : p.geoFocused ? '📍 Geo' : '⏱️ OT'}</div>
       `;
-
-      card.addEventListener('click', () => this.select(persona.id));
+      card.addEventListener('click', () => this.select(p.id));
       card.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this.select(persona.id);
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.select(p.id); }
       });
-
-      container.appendChild(card);
+      D.personaCards.appendChild(card);
     });
   },
 
-  select(personaId) {
-    const persona = this.personas.find(p => p.id === personaId);
-    if (!persona) return;
+  select(id) {
+    const p = this.list.find(x => x.id === id);
+    if (!p) return;
+    state.persona = p;
 
-    state.activePersona = persona;
-
-    // Update card active state
+    // Card states
     document.querySelectorAll('.persona-card').forEach(c => c.classList.remove('active'));
-    const activeCard = $(`persona-${personaId}`);
-    if (activeCard) activeCard.classList.add('active');
+    const el = document.getElementById(`pc-${id}`);
+    if (el) el.classList.add('active');
 
-    // Update chat header
-    DOM.chatAvatar.textContent = persona.avatar;
-    DOM.chatAvatar.style.borderColor = persona.color;
-    DOM.chatName.textContent = `${persona.name} — ${persona.occupation}`;
-    DOM.chatSub.textContent  = `${persona.originHindi} | ${persona.occupationHindi}`;
+    // Chat bar
+    D.chatAvatar.textContent = p.avatar;
+    D.chatAvatar.style.borderColor = p.color;
+    D.chatName.textContent = `${p.name} — ${p.occupation}`;
+    D.chatSub.textContent  = `${p.originHindi} | ${p.occupationHindi}`;
 
-    // Render starter questions
-    this.renderStarterQuestions(persona);
+    // Starter questions
+    this.renderStarters(p);
 
-    // Show welcome message for this persona
-    appendBotMessage(persona.welcomeMessage, [], null, true);
+    // Welcome message
+    addBotMsg(p.welcomeMessage, [], null, true);
 
-    // ── AQI Advisory: activate for construction persona ──────────────────
-    if (persona.aqiSensitive && state.aqiData) {
-      AQIManager.updateGRAPBanner(state.aqiData, persona);
+    // AQI advisory
+    if (p.aqiSensitive && state.aqiData) {
+      AQI.showGRAPBanner(state.aqiData, p);
     } else {
-      hideGRAPBanner();
+      hideGRAP();
     }
 
-    // Toast
-    showToast(`${persona.avatar} ${persona.name} का परिप्रेक्ष्य चुना गया`);
+    // Close mobile sidebar
+    D.sidebar.classList.remove('open');
+    D.sbOverlay.classList.remove('show');
 
-    // Close mobile sidebar if open
-    DOM.sidebar.classList.remove('open');
-
-    console.log(`[PersonaManager] Selected: ${personaId}`);
+    toast(`${p.avatar} ${p.name} selected`);
   },
 
-  renderStarterQuestions(persona) {
-    DOM.starterQs.innerHTML = '';
-    DOM.starterQs.classList.remove('empty');
-
-    if (!persona.starterQuestions?.length) {
-      DOM.starterQs.classList.add('empty');
-      return;
-    }
-
-    persona.starterQuestions.forEach(q => {
-      const chip = document.createElement('button');
-      chip.className = 'starter-chip';
-      chip.textContent = q;
-      chip.setAttribute('aria-label', `Ask: ${q}`);
-      chip.addEventListener('click', () => {
-        DOM.chatInput.value = q;
-        DOM.chatInput.dispatchEvent(new Event('input'));
-        sendMessage(q);
-      });
-      DOM.starterQs.appendChild(chip);
+  renderStarters(p) {
+    D.starters.innerHTML = '';
+    (p.starterQuestions ?? []).forEach(q => {
+      const btn = document.createElement('button');
+      btn.className = 'starter-btn';
+      btn.textContent = q;
+      btn.addEventListener('click', () => { D.chatInput.value = q; sendMsg(q); });
+      D.starters.appendChild(btn);
     });
   },
 };
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 4: AQI MANAGER
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: REAL_TIME_DATA — AQI + GRAP             ║
- * ║  Polls /api/aqi every 10 minutes. Updates the live AQI     ║
- * ║  header badge, sidebar gauge, and GRAP construction banner. ║
- * ║  For Ramesh (construction persona): shows work halt alert  ║
- * ║  with legal entitlement to paid compensation.              ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-const AQIManager = {
+// ══════════════════════════════════════════════════════════════════
+// AQI MANAGER
+// ══════════════════════════════════════════════════════════════════
+const AQI = {
   async init() {
     await this.fetch();
-
-    // Poll every 10 minutes
-    aqiRefreshInterval = setInterval(() => this.fetch(), 10 * 60 * 1000);
+    setInterval(() => this.fetch(), 10 * 60 * 1000);
   },
 
   async fetch() {
     try {
-      const res  = await fetch(`${API_BASE}/api/aqi`);
-      const data = await res.json();
-      state.aqiData = data;
-      this.render(data);
-      return data;
-    } catch (err) {
-      console.warn('[AQIManager] Fetch failed:', err.message);
-      this.renderError();
-    }
+      const r = await fetch(`${API}/api/aqi`);
+      const d = await r.json();
+      state.aqiData = d;
+      this.render(d);
+    } catch { /* keep last state */ }
   },
 
-  render(data) {
-    if (!data) return;
+  render(d) {
+    if (!d) return;
+    const aqi   = d.aqi   ?? 0;
+    const color = d.color ?? '#10b981';
+    const grap  = d.grapLabel ?? 'Good';
+    const emoji = d.emoji ?? '🟢';
 
-    const aqi   = data.aqi    ?? 0;
-    const color = data.color  ?? '#22c55e';
-    const grap  = data.grapLabel ?? 'Unknown';
+    // Topbar pill
+    D.aiqPillDot.style.background  = color;
+    D.aiqPillDot.style.boxShadow   = `0 0 8px ${color}80`;
+    D.aqiPillNum.textContent        = aqi > 0 ? aqi : '--';
+    D.aqiPillNum.style.color        = color;
+    D.aqiPillStage.textContent      = `${emoji} ${grap}`;
 
-    // ── Header badge ─────────────────────────────────────────────────────
-    DOM.aqiValue.textContent = aqi > 0 ? String(aqi) : '--';
-    DOM.aqiValue.style.color = color;
-    DOM.aqiDot.style.background = color;
-    DOM.aqiDot.style.boxShadow  = `0 0 8px ${color}80`;
-    DOM.aqiGrap.textContent = `${data.emoji ?? ''} ${grap}`;
-
-    // ── Sidebar gauge ─────────────────────────────────────────────────────
-    DOM.aqiGaugeNum.textContent = aqi > 0 ? String(aqi) : '--';
-    DOM.aqiGaugeNum.style.color = color;
-
-    // Conic gradient for gauge arc (max AQI 500)
+    // Sidebar ring gauge (SVG)
+    // Circumference of r=50 circle = 2πr ≈ 314
+    const CIRC = 314;
     const pct = Math.min(aqi / 500, 1);
-    const deg = Math.round(pct * 360);
-    DOM.aqiGaugeSvg.style.background =
-      `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.05) ${deg}deg)`;
+    const offset = CIRC * (1 - pct);
+    D.ringFill.style.strokeDashoffset = offset;
+    D.ringFill.style.stroke = color;
+    D.gaugeNum.textContent  = aqi > 0 ? aqi : '--';
+    D.gaugeNum.style.color  = color;
 
-    // ── GRAP stage label ──────────────────────────────────────────────────
-    DOM.grapStageLabel.textContent = `Stage ${data.grapStage} — ${grap}`;
-    DOM.grapStageLabel.style.color = color;
+    // Details
+    D.grapStage.textContent  = `Stage ${d.grapStage ?? 0} — ${grap}`;
+    D.grapStage.style.color  = color;
+    D.aqiSource.textContent  = d.live ? `🔴 LIVE · ${d.station ?? 'ITO'}` : `⚪ ${d.source ?? 'Simulated'}`;
+    D.constrStatus.textContent = d.constructionStop ? '🚫 HALTED (GRAP)' : '✅ Permitted';
+    D.constrStatus.style.color = d.constructionStop ? 'var(--red)' : 'var(--green)';
 
-    // ── Source & construction status ──────────────────────────────────────
-    DOM.aqiSourceEl.textContent = data.live ? `🔴 LIVE — ${data.station}` : `⚪ ${data.source}`;
-    DOM.constructionEl.textContent = data.constructionStop ? '🚫 HALTED (GRAP)' : '✅ Permitted';
-    DOM.constructionEl.style.color  = data.constructionStop ? 'var(--danger)' : 'var(--success)';
+    // Advisory
+    D.aqiAdvisory.textContent   = d.advisoryHi ?? d.advisoryEn ?? 'Advisory unavailable.';
+    D.aqiAdvBox.style.borderTopColor = color + '30';
 
-    // ── Advisory text ─────────────────────────────────────────────────────
-    const advisory = data.advisoryHi ?? data.advisoryEn ?? 'Advisory unavailable.';
-    DOM.advisoryText.textContent = advisory;
-    DOM.advisoryBox.style.borderColor = color + '40';
-
-    // ── GRAP Banner for construction persona ──────────────────────────────
-    if (state.activePersona?.aqiSensitive) {
-      this.updateGRAPBanner(data, state.activePersona);
-    }
+    // GRAP banner
+    if (state.persona?.aqiSensitive) this.showGRAPBanner(d, state.persona);
   },
 
-  updateGRAPBanner(data, persona) {
-    if (!data || !persona?.aqiSensitive) {
-      hideGRAPBanner();
-      return;
+  showGRAPBanner(d, persona) {
+    if (!d || !persona?.aqiSensitive || !d.constructionStop || d.grapStage < 2) {
+      hideGRAP(); return;
     }
-
-    if (data.constructionStop && data.grapStage >= 2) {
-      // ╔════════════════════════════════════════════════════════════╗
-      // ║  JUDGE EVALUATION: REAL_TIME_DATA — GRAP WORK HALT       ║
-      // ║  This banner activates ONLY for construction persona      ║
-      // ║  AND only when live AQI triggers GRAP Stage 2+.          ║
-      // ║  It shows legal right to PAID COMPENSATION — grounded    ║
-      // ║  in real-time AQI data from Elastic + BOCW Act.          ║
-      // ╚════════════════════════════════════════════════════════════╝
-      DOM.grapBanner.classList.remove('hidden', 'show');
-      DOM.grapEmoji.textContent  = data.emoji ?? '🚨';
-      DOM.grapTitle.textContent  = `GRAP ${data.grapLabel} — Delhi AQI: ${data.aqi}`;
-      DOM.grapMessage.textContent = data.advisoryHi;
-      DOM.grapBanner.style.background = `linear-gradient(135deg, ${data.color}cc 0%, #ef4444 100%)`;
-
-      // Show banner with animation
-      requestAnimationFrame(() => {
-        DOM.grapBanner.classList.add('show');
-      });
-    } else {
-      hideGRAPBanner();
-    }
-  },
-
-  renderError() {
-    DOM.aqiValue.textContent = '?';
-    DOM.aqiGrap.textContent  = 'API unavailable';
-    DOM.advisoryText.textContent = 'AQI data temporarily unavailable. Please try again later.';
+    D.grapEmoji.textContent = d.emoji ?? '🚨';
+    D.grapTitle.textContent = `GRAP ${d.grapLabel} — Delhi AQI ${d.aqi}`;
+    D.grapMsg.textContent   = d.advisoryHi;
+    D.grapBanner.style.background = `linear-gradient(135deg,${d.color}cc 0%,#c2002e 100%)`;
+    D.grapBanner.classList.add('visible');
   },
 };
 
-function hideGRAPBanner() {
-  DOM.grapBanner.classList.remove('show');
-  setTimeout(() => {
-    if (!DOM.grapBanner.classList.contains('show')) {
-      DOM.grapBanner.classList.add('hidden');
-    }
-  }, 400);
+function hideGRAP() {
+  D.grapBanner.classList.remove('visible');
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 5: GEO SEARCH MANAGER
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: ELASTIC_GEOSPATIAL                      ║
- * ║  Calls /api/offices/geo?pin=XXXXXX which triggers the      ║
- * ║  Elastic geo_distance query in geoSearch.js.               ║
- * ║  Renders nearest office cards with computed distance (km)  ║
- * ║  returned directly from Elasticsearch's sort field.        ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-const GeoManager = {
+// ══════════════════════════════════════════════════════════════════
+// GEO MANAGER
+// ══════════════════════════════════════════════════════════════════
+const Geo = {
   async searchByPin(pin) {
     if (!pin || !/^1[0-9]{5}$/.test(pin)) {
-      showGeoError('कृपया 6-अंकीय दिल्ली पिन कोड दर्ज करें (जैसे 110001)');
+      geoError('Please enter a valid 6-digit Delhi pin code (e.g. 110001)');
       return;
     }
-
-    setGeoLoading(true);
-
+    geoLoading(true);
     try {
-      const res  = await fetch(`${API_BASE}/api/offices/geo?pin=${encodeURIComponent(pin)}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        showGeoError(data.error ?? 'कार्यालय नहीं मिला');
-        return;
-      }
-
-      this.renderOffices(data.offices ?? []);
-    } catch (err) {
-      showGeoError('नेटवर्क त्रुटि — कृपया पुनः प्रयास करें');
-      console.error('[GeoManager]', err);
+      const r = await fetch(`${API}/api/offices/geo?pin=${encodeURIComponent(pin)}`);
+      const d = await r.json();
+      if (!r.ok) { geoError(d.error ?? 'Office not found'); return; }
+      this.render(d.offices ?? []);
+    } catch {
+      geoError('Network error — please try again');
     } finally {
-      setGeoLoading(false);
+      geoLoading(false);
     }
   },
 
-  renderOffices(offices) {
+  render(offices) {
     if (!offices.length) {
-      DOM.geoResult.innerHTML = `
-        <div class="geo-placeholder">
-          <span class="geo-placeholder-icon">❓</span>
-          <p>इस पिन कोड के लिए कोई कार्यालय नहीं मिला।</p>
-        </div>
-      `;
+      D.geoResult.innerHTML = `<div class="geo-empty"><div class="geo-empty-icon">❓</div><p>No office found for this pin code</p></div>`;
       return;
     }
-
-    // Render top result prominently + others below
-    DOM.geoResult.innerHTML = offices.map((office, idx) => `
-      <div class="geo-office-card" style="margin-bottom:${idx < offices.length - 1 ? '8px' : '0'}">
-        <div class="geo-office-rank">
-          ${idx === 0 ? '🏆 Nearest Office' : `#${office.rank} Office`}
-          <!-- ╔══════════════════════════════════════════╗
-               ║  JUDGE EVALUATION: ELASTIC_GEOSPATIAL  ║
-               ║  distanceKm is computed by Elastic's   ║
-               ║  _geo_distance sort field — exact       ║
-               ║  Haversine distance to the office.     ║
-               ╚══════════════════════════════════════════╝ -->
-          <span class="geo-distance-badge">📍 ${office.distanceKm} km away</span>
+    D.geoResult.innerHTML = offices.map((o, i) => `
+      <div class="geo-office-card">
+        <div class="geo-rank-row">
+          <span class="geo-rank-label">${i === 0 ? '🏆 Nearest' : `#${o.rank} Closest`}</span>
+          <span class="geo-dist-badge">📍 ${o.distanceKm} km</span>
         </div>
-        <div class="geo-office-name">${escapeHtml(office.officeName)}</div>
-        <div class="geo-office-addr">${escapeHtml(office.address)}</div>
-        <div class="geo-office-meta">
-          <div class="geo-meta-row">📞 <strong>${escapeHtml(office.phone ?? '')}${office.helpline ? ` | Helpline: ${office.helpline}` : ''}</strong></div>
-          <div class="geo-meta-row">🕐 ${escapeHtml(office.timings ?? '')}</div>
-          <div class="geo-meta-row">🚇 ${escapeHtml(office.nearestMetro ?? '')}</div>
-          ${office.note ? `<div class="geo-meta-row" style="color:var(--elastic)">ℹ️ ${escapeHtml(office.note)}</div>` : ''}
-        </div>
-        <a href="${escapeHtml(office.mapUrl ?? '#')}" target="_blank" rel="noopener noreferrer" class="geo-map-link">
-          🗺️ Google Maps पर देखें →
+        <div class="geo-office-name">${esc(o.officeName)}</div>
+        <div class="geo-detail">${esc(o.addressHindi ?? o.address ?? '')}</div>
+        <div class="geo-detail">📞 <strong>${esc(o.phone ?? '')}${o.helpline ? ` · ${o.helpline}` : ''}</strong></div>
+        <div class="geo-detail">🕐 ${esc(o.timings ?? '')}</div>
+        <div class="geo-detail">🚇 ${esc(o.nearestMetro ?? '')}</div>
+        ${o.note ? `<div class="geo-detail" style="color:var(--elastic);margin-top:4px">ℹ️ ${esc(o.note)}</div>` : ''}
+        <a class="geo-map-link" href="${esc(o.mapUrl ?? '#')}" target="_blank" rel="noopener">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          View on Google Maps
         </a>
       </div>
     `).join('');
   },
 };
 
-function setGeoLoading(loading) {
-  DOM.pinSearchBtn.disabled = loading;
-  DOM.pinSearchBtn.querySelector('span').textContent = loading ? '...' : 'खोजें';
-  if (loading) {
-    DOM.geoResult.innerHTML = `
-      <div class="geo-placeholder">
-        <span class="geo-placeholder-icon">🔍</span>
-        <p>Elastic geo_distance query running...</p>
-      </div>
-    `;
+function geoLoading(on) {
+  D.pinBtn.disabled = on;
+  if (on) {
+    D.geoResult.innerHTML = `<div class="geo-empty"><div class="geo-empty-icon">🔍</div><p>Running Elastic geo_distance query…</p></div>`;
   }
 }
 
-function showGeoError(message) {
-  DOM.geoResult.innerHTML = `
-    <div class="geo-placeholder">
-      <span class="geo-placeholder-icon">⚠️</span>
-      <p style="color:var(--danger)">${escapeHtml(message)}</p>
-    </div>
-  `;
+function geoError(msg) {
+  D.geoResult.innerHTML = `<div class="geo-empty"><div class="geo-empty-icon">⚠️</div><p style="color:var(--red)">${esc(msg)}</p></div>`;
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 6: CHAT ENGINE
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * sendMessage(queryOverride?) — Sends a chat message to /api/chat.
- *
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: SECURITY — Client-side Zero-Trust       ║
- * ║  1. Length validation before sending (max 500 chars)       ║
- * ║  2. Rate limit backoff: if 429 received, shows countdown   ║
- * ║  3. Persona context injected into request body             ║
- * ║  4. Pin code extracted from query for geo lookup           ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-async function sendMessage(queryOverride) {
-  if (state.isLoading) return;
-
-  // Rate limit check (client-side)
-  if (Date.now() < state.rateLimitedUntil) {
-    const secsLeft = Math.ceil((state.rateLimitedUntil - Date.now()) / 1000);
-    showToast(`⏱️ ${secsLeft} seconds बाद पुनः प्रयास करें | Rate limit`);
-    return;
-  }
-
-  const query = (queryOverride ?? DOM.chatInput.value).trim();
-  if (!query) return;
-
-  // Client-side length validation
-  if (query.length > 500) {
-    showToast('❌ संदेश बहुत लंबा है (500 अक्षर सीमा)');
-    return;
-  }
-
-  // Extract pin code from query if present (6-digit starting with 1)
-  const pinMatch    = query.match(/\b(1[0-9]{5})\b/);
-  const pinCode     = pinMatch ? pinMatch[1] : null;
-  const personaId   = state.activePersona?.id ?? null;
-  const language    = state.activePersona?.language ?? 'hi';
-
-  // Show user message
-  appendUserMessage(query);
-  DOM.chatInput.value = '';
-  DOM.chatInput.style.height = 'auto';
-  DOM.charCount.textContent = '0/500';
-  DOM.sendBtn.disabled = true;
-
-  // Trigger geo search if pin code detected
-  if (pinCode) {
-    setTimeout(() => GeoManager.searchByPin(pinCode), 500);
-  }
-
-  // Show typing indicator
-  const typingId = appendTypingIndicator();
-
-  state.isLoading = true;
-  const startTime = Date.now();
-
-  try {
-    const body = {
-      query,
-      language,
-      ...(pinCode   && { pinCode }),
-      ...(personaId && { personaId }),
-    };
-
-    const res = await fetch(`${API_BASE}/api/chat`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    });
-
-    removeTypingIndicator(typingId);
-
-    // ╔══════════════════════════════════════════════════════════╗
-    // ║  JUDGE EVALUATION: SECURITY — Rate Limit Handling      ║
-    // ║  Client gracefully handles 429 from server-side rate   ║
-    // ║  limiter (50 req/15min per IP from express-rate-limit). ║
-    // ╚══════════════════════════════════════════════════════════╝
-    if (res.status === 429) {
-      state.rateLimitedUntil = Date.now() + 900_000; // 15 min
-      appendBotMessage(
-        '⏱️ बहुत अधिक अनुरोध। कृपया 15 मिनट बाद पुनः प्रयास करें।\n\nToo many requests. Rate limit active — please try again in 15 minutes.',
-        [], null
-      );
-      showToast('🚦 Rate limit reached — 15 min cooldown');
-      return;
-    }
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error ?? `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    const latency = Date.now() - startTime;
-
-    // Render AQI advisory in chat if construction persona + halt
-    let aqiContext = null;
-    if (state.activePersona?.aqiSensitive && state.aqiData?.constructionStop) {
-      aqiContext = {
-        aqi:     state.aqiData.aqi,
-        label:   state.aqiData.grapLabel,
-        advisory: state.aqiData.advisoryHi,
-        color:   state.aqiData.color,
-      };
-    }
-
-    // Format response
-    const responseText = data.response ?? '❌ कोई प्रतिक्रिया नहीं मिली।';
-    appendBotMessage(responseText, data.citations ?? [], data.nearestOffice, false, aqiContext, latency);
-
-    state.messageCount++;
-
-    // Auto-refresh stats after each chat
-    setTimeout(StatsManager.fetch.bind(StatsManager), 2000);
-
-  } catch (err) {
-    removeTypingIndicator(typingId);
-    console.error('[Chat]', err);
-    appendBotMessage(
-      `⚠️ माफ़ कीजिए, एक त्रुटि हुई। कृपया पुनः प्रयास करें।\n\nError: ${err.message}\n\n📞 Helpline: 1800-11-2345`,
-      [], null
-    );
-    showToast('❌ Request failed — please retry');
-  } finally {
-    state.isLoading = false;
-    DOM.sendBtn.disabled = false;
-    autoResizeInput();
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 7: MESSAGE RENDERING
-// ════════════════════════════════════════════════════════════════════
-
-function appendUserMessage(text) {
-  const div = document.createElement('div');
-  div.className = 'message message-user';
-  div.innerHTML = `
-    <div class="message-bubble">
-      <div class="message-content">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
-      <div class="message-time">${formatTime()} · You</div>
-    </div>
-    <div class="message-avatar">
-      ${state.activePersona?.avatar ?? '👤'}
-    </div>
-  `;
-  DOM.messages.appendChild(div);
-  scrollToBottom();
-}
-
-function appendBotMessage(text, citations = [], officeData = null, isWelcome = false, aqiContext = null, latencyMs = null) {
-  const div = document.createElement('div');
-  div.className = 'message message-bot';
-  if (isWelcome) div.classList.add('welcome-message');
-
-  const avatar = isWelcome ? '⚖️' : (state.activePersona?.avatar ?? '⚖️');
-
-  // Format the response text with markdown-like rendering
-  const formattedText = formatBotText(text);
-
-  // Citations block
-  const citationsHtml = citations?.length
-    ? `<div class="citations">
-        ${citations.map(c => `<span class="citation-chip">📋 ${escapeHtml(String(c))}</span>`).join('')}
-       </div>`
-    : '';
-
-  // AQI advisory block (shown for construction persona on halt days)
-  let aqiHtml = '';
-  if (aqiContext) {
-    aqiHtml = `
-      <div class="office-card-chat" style="border-color:${aqiContext.color}40;background:${aqiContext.color}10">
-        <div class="office-name" style="color:${aqiContext.color}">
-          🌫️ GRAP Alert: Delhi AQI ${aqiContext.aqi} — ${aqiContext.label}
-        </div>
-        <p style="margin-top:4px;font-family:'Noto Sans Devanagari',sans-serif;font-size:0.7rem">
-          ${escapeHtml(aqiContext.advisory)}
-        </p>
-      </div>
-    `;
-  }
-
-  // Nearest office block
-  let officeHtml = '';
-  if (officeData) {
-    officeHtml = `
-      <div class="office-card-chat">
-        <div class="office-name">🏛️ ${escapeHtml(officeData.officeName ?? officeData.name ?? '')}</div>
-        <p>📍 ${escapeHtml(officeData.address ?? '')}</p>
-        <p>📞 ${escapeHtml(officeData.phone ?? '')}${officeData.helpline ? ` | ${officeData.helpline}` : ''}</p>
-        <p>🚇 ${escapeHtml(officeData.nearestMetro ?? '')}</p>
-      </div>
-    `;
-  }
-
-  // Latency badge
-  const latencyBadge = latencyMs
-    ? `<span style="margin-left:8px;color:var(--elastic);font-size:0.58rem">⚡ ${latencyMs}ms</span>`
-    : '';
-
-  div.innerHTML = `
-    <div class="message-avatar">${avatar}</div>
-    <div class="message-bubble">
-      <div class="message-content">
-        ${formattedText}
-        ${aqiHtml}
-        ${officeHtml}
-        ${citationsHtml}
-      </div>
-      <div class="message-time">${formatTime()} · Shrayak AI${latencyBadge}</div>
-    </div>
-  `;
-
-  DOM.messages.appendChild(div);
-  scrollToBottom();
-}
-
-function appendTypingIndicator() {
-  const id = `typing-${Date.now()}`;
-  const div = document.createElement('div');
-  div.className = 'message message-bot typing-indicator';
-  div.id = id;
-  div.innerHTML = `
-    <div class="message-avatar">⚖️</div>
-    <div class="message-bubble">
-      <div class="message-content">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
-    </div>
-  `;
-  DOM.messages.appendChild(div);
-  scrollToBottom();
-  return id;
-}
-
-function removeTypingIndicator(id) {
-  const el = $(id);
-  if (el) el.remove();
-}
-
-// ════════════════════════════════════════════════════════════════════
-// SECTION 8: STATS / OBSERVABILITY MANAGER
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: SECURITY — ELASTIC OBSERVABILITY        ║
- * ║  Fetches 24h aggregations from /api/stats which reads      ║
- * ║  from the telemetry_logs Elastic index. Displays total     ║
- * ║  requests, PII detection rate, avg latency, success rate.  ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-const StatsManager = {
+// ══════════════════════════════════════════════════════════════════
+// STATS MANAGER
+// ══════════════════════════════════════════════════════════════════
+const Stats = {
   async init() {
     await this.fetch();
-    // Refresh every 30 seconds
-    statsRefreshInterval = setInterval(() => this.fetch(), 30_000);
+    setInterval(() => this.fetch(), 30_000);
   },
 
   async fetch() {
     try {
-      const res  = await fetch(`${API_BASE}/api/stats`);
-
-      if (res.status === 503) {
-        DOM.telemetryStatus.textContent = 'Elastic unavailable';
-        return;
-      }
-
-      const data = await res.json();
-
-      if (data.error) {
-        DOM.telemetryStatus.textContent = 'Stats unavailable';
-        return;
-      }
-
-      DOM.telemetryStatus.textContent = `24h: ${data.totalRequests ?? 0} reqs`;
-      DOM.telemetryStatus.classList.add('active');
-
-      DOM.statTotal.textContent    = data.totalRequests ?? '--';
-      DOM.statPII.textContent      = data.piiDetectionRate ?? '--';
-      DOM.statLatency.textContent  = data.latency?.avgMs ? `${data.latency.avgMs}ms` : '--';
-      DOM.statSuccess.textContent  = data.successRate ?? '--';
-
-    } catch (err) {
-      console.warn('[StatsManager] Fetch failed:', err.message);
-      DOM.telemetryStatus.textContent = 'Offline';
+      const r = await fetch(`${API}/api/stats`);
+      if (r.status === 503) { D.telemStatus.textContent = 'Elastic offline'; return; }
+      const d = await r.json();
+      if (d.error) { D.telemStatus.textContent = 'Stats unavailable'; return; }
+      D.telemStatus.textContent = `24h · ${d.totalRequests ?? 0} reqs`;
+      D.telemDot.classList.add('sec-dot--green');
+      D.statTotal.textContent   = d.totalRequests ?? '--';
+      D.statPII.textContent     = d.piiDetectionRate ?? '--';
+      D.statLatency.textContent = d.latency?.avgMs ? `${d.latency.avgMs}ms` : '--';
+      D.statSuccess.textContent = d.successRate ?? '--';
+    } catch {
+      D.telemStatus.textContent = 'Offline';
     }
   },
 };
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 9: HEALTH CHECK
-// ════════════════════════════════════════════════════════════════════
-
-async function checkHealth() {
+// ══════════════════════════════════════════════════════════════════
+// HEALTH CHECK
+// ══════════════════════════════════════════════════════════════════
+async function healthCheck() {
   try {
-    const res  = await fetch(`${API_BASE}/api/health`);
-    const data = await res.json();
-
-    const esOk = data.services?.elasticsearch?.connected ?? false;
-
-    DOM.elasticDot.className = `status-dot ${esOk ? '' : 'offline'}`;
-    DOM.elasticStatus.title  = esOk
-      ? `Elastic: Connected (${data.services.elasticsearch.latencyMs}ms)`
-      : 'Elastic: Disconnected';
-
-  } catch (err) {
-    DOM.elasticDot.className = 'status-dot offline';
-    console.warn('[HealthCheck] Failed:', err.message);
+    const r = await fetch(`${API}/api/health`);
+    const d = await r.json();
+    const ok = d.services?.elasticsearch?.connected ?? false;
+    D.elasticDot.className = `status-dot${ok ? '' : ' offline'}`;
+  } catch {
+    D.elasticDot.className = 'status-dot offline';
   }
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 10: INPUT HANDLING
-// ════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════
+// CHAT ENGINE
+// ══════════════════════════════════════════════════════════════════
+async function sendMsg(override) {
+  if (state.loading) return;
 
-function autoResizeInput() {
-  const ta = DOM.chatInput;
-  ta.style.height = 'auto';
-  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  if (Date.now() < state.rateLimitedUntil) {
+    const s = Math.ceil((state.rateLimitedUntil - Date.now()) / 1000);
+    toast(`⏱️ Rate limited — retry in ${s}s`);
+    return;
+  }
+
+  const text = (override ?? D.chatInput.value).trim();
+  if (!text) return;
+  if (text.length > 500) { toast('❌ Message too long (500 char limit)'); return; }
+
+  const pinMatch = text.match(/\b(1[0-9]{5})\b/);
+  const pin      = pinMatch?.[1] ?? null;
+
+  addUserMsg(text);
+  D.chatInput.value = '';
+  D.chatInput.style.height = 'auto';
+  D.charCount.textContent = '';
+  D.sendBtn.disabled = true;
+
+  if (pin) setTimeout(() => Geo.searchByPin(pin), 600);
+
+  const typingId = addTyping();
+  state.loading = true;
+  const t0 = Date.now();
+
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        query:      text,
+        language:   state.persona?.language ?? 'hi',
+        ...(pin                && { pinCode: pin }),
+        ...(state.persona?.id  && { personaId: state.persona.id }),
+      }),
+    });
+
+    removeTyping(typingId);
+
+    if (res.status === 429) {
+      state.rateLimitedUntil = Date.now() + 900_000;
+      addBotMsg('⏱️ बहुत अधिक अनुरोध। 15 मिनट बाद पुनः प्रयास करें।\n\nRate limit reached — please try again in 15 minutes.', [], null);
+      toast('🚦 Rate limit — 15 min cooldown');
+      return;
+    }
+
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error ?? `HTTP ${res.status}`);
+    }
+
+    const d = await res.json();
+    const ms = Date.now() - t0;
+
+    // AQI context for construction persona on halt days
+    let aqiCtx = null;
+    if (state.persona?.aqiSensitive && state.aqiData?.constructionStop) {
+      aqiCtx = state.aqiData;
+    }
+
+    addBotMsg(d.response ?? '❌ No response.', d.citations ?? [], d.nearestOffice ?? null, false, aqiCtx, ms);
+
+    // Refresh stats
+    setTimeout(() => Stats.fetch(), 2000);
+
+  } catch (err) {
+    removeTyping(typingId);
+    addBotMsg(`⚠️ माफ़ कीजिए, त्रुटि हुई। पुनः प्रयास करें।\n\n${err.message}\n\n📞 Helpline: 1800-11-2345`, [], null);
+    toast('❌ Request failed');
+  } finally {
+    state.loading = false;
+    D.sendBtn.disabled = (D.chatInput.value.trim().length === 0);
+  }
 }
 
+// ══════════════════════════════════════════════════════════════════
+// MESSAGE RENDERERS
+// ══════════════════════════════════════════════════════════════════
+function addUserMsg(text) {
+  const d = document.createElement('div');
+  d.className = 'msg msg--user';
+  d.innerHTML = `
+    <div class="msg-body">
+      <div class="msg-bubble">${esc(text).replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${now()} · You</div>
+    </div>
+    <div class="msg-avatar">${state.persona?.avatar ?? '👤'}</div>
+  `;
+  D.messages.appendChild(d);
+  scrollBottom();
+}
+
+function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCtx = null, ms = null) {
+  const avatar = isWelcome ? '⚖️' : (state.persona?.avatar ?? '⚖️');
+  const content = fmt(text);
+
+  // Citations
+  const cites = citations.length
+    ? `<div class="citations">${citations.map(c => `<span class="cite-chip">📋 ${esc(String(c))}</span>`).join('')}</div>`
+    : '';
+
+  // AQI warning
+  let aqiHtml = '';
+  if (aqiCtx) {
+    aqiHtml = `
+      <div class="chat-aqi-warn" style="background:${aqiCtx.color}12;border-color:${aqiCtx.color}30">
+        <div class="chat-aqi-warn-title" style="color:${aqiCtx.color}">
+          🌫️ GRAP ${aqiCtx.grapLabel} — Delhi AQI ${aqiCtx.aqi}
+        </div>
+        <p>${esc(aqiCtx.advisoryHi)}</p>
+      </div>
+    `;
+  }
+
+  // Nearest office
+  let offHtml = '';
+  if (office) {
+    offHtml = `
+      <div class="chat-office">
+        <div class="chat-office-name">🏛️ ${esc(office.officeName ?? office.name ?? '')}</div>
+        <p>📍 ${esc(office.address ?? office.addressHindi ?? '')}</p>
+        <p>📞 ${esc(office.phone ?? '')}${office.helpline ? ` · ${office.helpline}` : ''}</p>
+        <p>🚇 ${esc(office.nearestMetro ?? '')}</p>
+      </div>
+    `;
+  }
+
+  const latBadge = ms ? `<span style="margin-left:8px;color:var(--elastic);font-size:.58rem">⚡ ${ms}ms</span>` : '';
+
+  const d = document.createElement('div');
+  d.className = 'msg msg--bot' + (isWelcome ? ' msg--welcome' : '');
+  d.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div class="msg-body">
+      <div class="msg-bubble">
+        ${content}
+        ${aqiHtml}
+        ${offHtml}
+        ${cites}
+      </div>
+      <div class="msg-time">${now()} · Shrayak AI${latBadge}</div>
+    </div>
+  `;
+  D.messages.appendChild(d);
+  scrollBottom();
+}
+
+function addTyping() {
+  const id = `t-${Date.now()}`;
+  const d = document.createElement('div');
+  d.className = 'msg msg--bot';
+  d.id = id;
+  d.innerHTML = `
+    <div class="msg-avatar">⚖️</div>
+    <div class="msg-body">
+      <div class="msg-bubble">
+        <div class="typing-dots">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  D.messages.appendChild(d);
+  scrollBottom();
+  return id;
+}
+
+function removeTyping(id) {
+  document.getElementById(id)?.remove();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INPUT SETUP
+// ══════════════════════════════════════════════════════════════════
 function setupInput() {
-  DOM.chatInput.addEventListener('input', () => {
-    const len = DOM.chatInput.value.length;
-    DOM.charCount.textContent = `${len}/500`;
-    DOM.charCount.classList.toggle('warning', len > 400);
-    DOM.sendBtn.disabled = len === 0 || state.isLoading;
-    autoResizeInput();
+  D.chatInput.addEventListener('input', () => {
+    autoResize();
+    const len = D.chatInput.value.length;
+    D.charCount.textContent = len ? `${len}/500` : '';
+    D.charCount.classList.toggle('warn', len > 400);
+    D.sendBtn.disabled = len === 0 || state.loading;
   });
 
-  DOM.chatInput.addEventListener('keydown', e => {
+  D.chatInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!DOM.sendBtn.disabled) sendMessage();
+      if (!D.sendBtn.disabled) sendMsg();
     }
   });
 
-  DOM.sendBtn.addEventListener('click', () => sendMessage());
+  D.sendBtn.addEventListener('click', () => sendMsg());
 
-  // Pin search
-  DOM.pinSearchBtn.addEventListener('click', () => {
-    const pin = DOM.pinInput.value.trim();
-    GeoManager.searchByPin(pin);
+  // Geo
+  D.pinBtn.addEventListener('click', () => Geo.searchByPin(D.pinInput.value.trim()));
+  D.pinInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') Geo.searchByPin(D.pinInput.value.trim());
   });
 
-  DOM.pinInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const pin = DOM.pinInput.value.trim();
-      GeoManager.searchByPin(pin);
-    }
+  // GRAP dismiss
+  D.grapDismiss.addEventListener('click', hideGRAP);
+
+  // Mobile sidebar
+  D.menuBtn.addEventListener('click', () => {
+    D.sidebar.classList.toggle('open');
+    D.sbOverlay.classList.toggle('show');
   });
 
-  // GRAP banner dismiss
-  DOM.grapDismiss.addEventListener('click', hideGRAPBanner);
-
-  // Mobile sidebar toggle
-  DOM.mobileMenuBtn.addEventListener('click', () => {
-    DOM.sidebar.classList.toggle('open');
-  });
-
-  // Click outside sidebar to close on mobile
-  document.addEventListener('click', e => {
-    if (window.innerWidth <= 768 &&
-        DOM.sidebar.classList.contains('open') &&
-        !DOM.sidebar.contains(e.target) &&
-        e.target !== DOM.mobileMenuBtn) {
-      DOM.sidebar.classList.remove('open');
-    }
+  D.sbOverlay.addEventListener('click', () => {
+    D.sidebar.classList.remove('open');
+    D.sbOverlay.classList.remove('show');
   });
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 11: UTILITIES
-// ════════════════════════════════════════════════════════════════════
-
-/**
- * ╔══════════════════════════════════════════════════════════════╗
- * ║  JUDGE EVALUATION: SECURITY — XSS Prevention               ║
- * ║  escapeHtml() sanitizes all user-provided content before   ║
- * ║  inserting into DOM via innerHTML. Prevents XSS attacks.   ║
- * ╚══════════════════════════════════════════════════════════════╝
- */
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(String(str ?? '')));
-  return div.innerHTML;
-}
-
-/**
- * formatBotText — Converts bot response to safe HTML with basic formatting.
- * Handles: bold (**text**), newlines, bullet points.
- * All content is escaped first — no raw HTML from the API is rendered.
- */
-function formatBotText(text) {
-  if (!text) return '';
-
-  let safe = escapeHtml(text);
-
-  // Convert **bold** to <strong>
-  safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Convert newlines to <br>
-  safe = safe.replace(/\n/g, '<br>');
-
-  // Convert leading bullet symbols (- or •) to actual bullets
-  safe = safe.replace(/(^|<br>)\s*[-•]\s+/g, '$1&nbsp;&nbsp;• ');
-
-  return safe;
-}
-
-function scrollToBottom() {
-  requestAnimationFrame(() => {
-    DOM.messages.scrollTop = DOM.messages.scrollHeight;
-  });
-}
-
-function formatTime() {
-  return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-}
-
-let toastTimer = null;
-function showToast(message) {
-  DOM.toast.textContent = message;
-  DOM.toast.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => DOM.toast.classList.remove('show'), 3500);
-}
-
-function getFallbackPersonas() {
+// ══════════════════════════════════════════════════════════════════
+// FALLBACK PERSONAS
+// ══════════════════════════════════════════════════════════════════
+function fallbackPersonas() {
   return [
     {
       id: 'ramesh', name: 'Ramesh Kumar', nameHindi: 'रमेश कुमार',
-      origin: 'Bihar', originHindi: 'बिहार',
+      origin: 'Bihar', originHindi: 'मुज़फ्फ़रपुर, बिहार',
       occupation: 'Construction Worker', occupationHindi: 'निर्माण श्रमिक',
-      avatar: '👷', color: '#f97316', colorDark: '#ea580c',
-      language: 'hi', aqiSensitive: true, geoFocused: true,
-      vulnerabilities: ['Below-minimum wage', 'No BOCW registration', 'GRAP halt compensation'],
-      starterQuestions: ['मेरा न्यूनतम वेतन कितना होना चाहिए?', 'BOCW कार्ड कैसे बनाएं?'],
-      welcomeMessage: 'नमस्ते रमेश! मैं आपकी मदद के लिए यहां हूं।',
+      avatar: '👷', color: '#f97316', language: 'hi',
+      aqiSensitive: true, geoFocused: true,
+      starterQuestions: ['मेरा न्यूनतम वेतन क्या है?', 'BOCW कार्ड कैसे बनाएं?', 'क्या आज काम बंद है?'],
+      welcomeMessage: 'नमस्ते रमेश! मैं Shrayak हूं। आज दिल्ली AQI और आपके अधिकारों की जानकारी दूंगा।',
     },
     {
       id: 'sita', name: 'Sita Devi', nameHindi: 'सीता देवी',
-      origin: 'UP', originHindi: 'उत्तर प्रदेश',
+      origin: 'UP', originHindi: 'कानपुर, उत्तर प्रदेश',
       occupation: 'Domestic Worker', occupationHindi: 'घरेलू कामगार',
-      avatar: '👩', color: '#8b5cf6', colorDark: '#7c3aed',
-      language: 'hi', aqiSensitive: false, geoFocused: true,
-      vulnerabilities: ['No written contract', 'Below minimum wage', 'No weekly rest'],
-      starterQuestions: ['घरेलू कामगार का न्यूनतम वेतन क्या है?', 'e-Shram कार्ड कैसे बनाएं?'],
-      welcomeMessage: 'नमस्ते सीता जी! आपके अधिकारों की जानकारी के लिए मैं यहां हूं।',
+      avatar: '👩', color: '#8b5cf6', language: 'hi',
+      aqiSensitive: false, geoFocused: true,
+      starterQuestions: ['घरेलू कामगार का न्यूनतम वेतन?', 'e-Shram कार्ड कैसे बनाएं?', 'छुट्टी के अधिकार क्या हैं?'],
+      welcomeMessage: 'नमस्ते सीता जी! आपके घरेलू कामगार अधिकारों के लिए यहां हूं।',
     },
     {
       id: 'priya', name: 'Priya Sharma', nameHindi: 'प्रिया शर्मा',
-      origin: 'Rajasthan', originHindi: 'राजस्थान',
+      origin: 'Rajasthan', originHindi: 'जयपुर, राजस्थान',
       occupation: 'Garment Worker', occupationHindi: 'वस्त्र उद्योग श्रमिक',
-      avatar: '👩‍💼', color: '#06b6d4', colorDark: '#0891b2',
-      language: 'hi', aqiSensitive: false, geoFocused: false,
-      vulnerabilities: ['Forced overtime', 'ESI non-compliance', 'No maternity leave'],
-      starterQuestions: ['ओवरटाइम का दोगुना पैसा कैसे मांगें?', 'ESI शिकायत कहां करें?'],
+      avatar: '👩‍💼', color: '#06b6d4', language: 'hi',
+      aqiSensitive: false, geoFocused: false,
+      starterQuestions: ['ओवरटाइम का पैसा कितना मिलेगा?', 'ESI शिकायत कहां करें?', 'मातृत्व अवकाश कैसे मिलेगा?'],
       welcomeMessage: 'नमस्ते प्रिया! आपके कारखाना अधिकारों के बारे में बात करते हैं।',
     },
   ];
 }
 
-// ════════════════════════════════════════════════════════════════════
-// SECTION 12: APP INITIALIZATION
-// ════════════════════════════════════════════════════════════════════
-
-async function initApp() {
-  console.log('[Shrayak] 🚀 Initializing...');
-
-  // Setup all event listeners
+// ══════════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════════
+async function boot() {
+  resolveDOM();
   setupInput();
 
-  // Run initializers in parallel
   await Promise.allSettled([
-    PersonaManager.init(),
-    AQIManager.init(),
-    StatsManager.init(),
-    checkHealth(),
+    Personas.init(),
+    AQI.init(),
+    Stats.init(),
+    healthCheck(),
   ]);
 
-  // Health re-check every 60 seconds
-  setInterval(checkHealth, 60_000);
-
-  console.log('[Shrayak] ✅ Ready!');
+  setInterval(healthCheck, 60_000);
 }
 
-// Bootstrap
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', boot);
