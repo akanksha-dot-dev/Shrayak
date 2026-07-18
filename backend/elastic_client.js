@@ -222,64 +222,44 @@ function getElasticClient() {
   // Return cached client on subsequent calls
   if (_esClient) return _esClient;
 
-  const cloudId = process.env.ELASTIC_CLOUD_ID;
-  const apiKey  = process.env.ELASTIC_API_KEY;
+  const url    = process.env.ELASTIC_ES_URL;
+  const apiKey = process.env.ELASTIC_API_KEY;
 
-  // SECURITY: Detect placeholder/missing credentials — never throw
-  // to crash the server. Graceful degradation allows the frontend
-  // to serve and chat to use fallback responses.
-  const isUnconfigured = !cloudId || !apiKey ||
-    cloudId.startsWith('placeholder') || apiKey.startsWith('placeholder');
+  const isUnconfigured = !url || !apiKey || url.includes('your_') || apiKey.includes('your_');
 
   if (isUnconfigured) {
     logger.warn('[elastic_client] Credentials missing or placeholder. ' +
-      'Elastic features disabled. Set ELASTIC_CLOUD_ID + ELASTIC_API_KEY in .env.');
+      'Elastic features disabled. Set ELASTIC_ES_URL + ELASTIC_API_KEY in .env.');
     return null;
   }
 
   try {
     _esClient = new Client({
-      // ── Authentication ──────────────────────────────────────────────
-      // Cloud ID: base64 blob that encodes the deployment URL.
-      // The @elastic/elasticsearch client decodes this internally.
-      // NEVER substitute with a raw URL here.
-      cloud: { id: cloudId },
+      // ── Connection ──────────────────────────────────────────────────
+      // @elastic/elasticsearch uses node: URL for Serverless connection
+      node: url,
 
       // API Key: base64-encoded ID:key pair. More secure than
-      // username/password because:
-      //   1. Scoped to specific index patterns
-      //   2. Revocable without changing passwords
-      //   3. Auditable in Kibana → Stack Management → API Keys
+      // username/password.
       auth: { apiKey },
 
       // ── Resilience ──────────────────────────────────────────────────
-      // 30s timeout covers slow Elastic Cloud cold starts
       requestTimeout: 30_000,
-
-      // Retry up to 3 times on transient 5xx / network errors.
-      // The client uses exponential backoff between retries.
       maxRetries: 3,
 
       // ── Performance ─────────────────────────────────────────────────
-      // gzip compression reduces bandwidth for large document ingestion
       compression: true,
-
-      // Sniffing is DISABLED for Elastic Cloud — the load balancer
-      // handles node discovery internally. Enabling sniff would
-      // try to contact internal node addresses unreachable from outside.
       sniffOnStart: false,
     });
 
-    logger.info('[elastic_client] ✅ Elasticsearch client initialized', {
-      // SECURITY: Log only the deployment name prefix, NOT the full Cloud ID
-      deploymentHint: cloudId.substring(0, 10) + '...',
+    logger.info('[elastic_client] ✅ Elasticsearch client initialized (Serverless-compatible)', {
+      url,
       index:   process.env.ELASTIC_INDEX_DOCS       ?? 'delhi_labour_laws',
-      telemetry: process.env.ELASTIC_INDEX_TELEMETRY ?? 'agent_telemetry_logs',
+      telemetry: process.env.ELASTIC_INDEX_TELEMETRY ?? 'telemetry_logs',
     });
 
     return _esClient;
   } catch (err) {
-    // Construction errors (malformed Cloud ID, etc.) — log and degrade
     logger.error('[elastic_client] Failed to construct Elasticsearch client', {
       error: err.message,
     });

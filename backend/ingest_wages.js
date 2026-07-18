@@ -85,9 +85,6 @@ const BATCH_CONCURRENCY = 3; // Max parallel Gemini embedding calls (rate-limit 
 
 const INDEX_MAPPING = {
   settings: {
-    number_of_shards:   1, // Single shard fine for <1M docs
-    number_of_replicas: 1, // One replica for HA in Elastic Cloud
-
     // Custom analyzer for Hindi + English mixed text
     analysis: {
       analyzer: {
