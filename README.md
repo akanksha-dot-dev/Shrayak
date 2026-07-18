@@ -398,7 +398,7 @@ Build this Kibana dashboard from the ECS-format JSON logs emitted to stdout (con
 
 ## 👥 Team
 
-Built with ❤️ for the **Build With AI — Elastic × GDG Cloud New Delhi Buildathon 2025**.
+Built with ❤️ for the **Build With AI — Elastic × GDG Cloud New Delhi Buildathon 2026**.
 
 ---
 
