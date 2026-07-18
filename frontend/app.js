@@ -24,25 +24,12 @@ let D = {};
 function resolveDOM() {
   const g = id => document.getElementById(id);
   D = {
-    // GRAP banner
-    grapBanner:   g('grap-banner'),
-    grapEmoji:    g('grap-emoji'),
-    grapTitle:    g('grap-title'),
-    grapMsg:      g('grap-message'),
-    grapDismiss:  g('grap-dismiss'),
+    // Worker Registry
+    workerInput:  g('worker-search-input'),
+    workerBtn:    g('worker-search-btn'),
+    workerResult: g('worker-result'),
     // Sidebar persona
     personaCards: g('persona-cards'),
-    // AQI
-    aqiPillDot:   g('aqi-dot'),
-    aqiPillNum:   g('aqi-value'),
-    aqiPillStage: g('aqi-grap'),
-    gaugeNum:     g('gauge-number'),
-    ringFill:     g('aqi-ring-fill'),
-    grapStage:    g('grap-stage-label'),
-    aqiSource:    g('aqi-source'),
-    constrStatus: g('construction-status'),
-    aqiAdvisory:  g('aqi-advisory-text'),
-    aqiAdvBox:    g('aqi-advisory-box'),
     // Geo
     pinInput:     g('pin-input'),
     pinBtn:       g('pin-search-btn'),
