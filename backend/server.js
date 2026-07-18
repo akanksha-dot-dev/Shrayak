@@ -51,6 +51,7 @@ const { createIndex } = require('./ingest_wages');
 const { seedWorkerRegistry, searchWorkers }       = require('./workerRegistry');
 const { findNearestOffice, findNearestOfficeByPin, seedGeoIndex } = require('./geoSearch');
 const { getAllPersonas, getPersona }               = require('./personaContext');
+const { getWorkerStats, getWageRates, getNewsItems, getRegistrationCount, initLiveData } = require('./liveDataService');
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ app.use(
         styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
         imgSrc:     ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://fonts.googleapis.com'],
+        connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://pib.gov.in', 'https://labour.delhi.gov.in'],
         frameSrc:   ["'none'"],
         objectSrc:  ["'none'"],
         upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
@@ -530,6 +531,59 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+// ─── API: Live Stats (Real-Time Elastic Aggregations) ───────────────────────
+
+/**
+ * GET /api/live-stats
+ * Returns real-time Elastic aggregations from delhi_workers index.
+ * Powers the live stats bar in the frontend.
+ */
+app.get('/api/live-stats', async (req, res) => {
+  try {
+    const [stats, regCount] = await Promise.all([
+      getWorkerStats(),
+      getRegistrationCount(),
+    ]);
+    return res.status(200).json({ ...stats, registrationCount: regCount.count });
+  } catch (err) {
+    logger.error('Live stats endpoint error', { error: err.message });
+    return res.status(500).json({ error: 'Live stats unavailable', code: 'STATS_ERROR' });
+  }
+});
+
+// ─── API: Labour News Feed ────────────────────────────────────────────────────
+
+/**
+ * GET /api/news
+ * Returns latest labour news/circulars (PIB RSS + Elastic cached).
+ */
+app.get('/api/news', async (req, res) => {
+  try {
+    const news = await getNewsItems();
+    return res.status(200).json(news);
+  } catch (err) {
+    logger.error('News feed endpoint error', { error: err.message });
+    return res.status(500).json({ error: 'News feed unavailable', code: 'NEWS_ERROR' });
+  }
+});
+
+// ─── API: Live Minimum Wages ──────────────────────────────────────────────────
+
+/**
+ * GET /api/wages/live
+ * Returns current official Delhi minimum wages from Elastic with timestamp.
+ * Used by frontend to dynamically compute wage compliance.
+ */
+app.get('/api/wages/live', async (req, res) => {
+  try {
+    const wages = await getWageRates();
+    return res.status(200).json(wages);
+  } catch (err) {
+    logger.error('Wages live endpoint error', { error: err.message });
+    return res.status(500).json({ error: 'Wage data unavailable', code: 'WAGES_ERROR' });
+  }
+});
+
 // ─── Catch-all: Serve Frontend SPA ───────────────────────────────────────────
 
 app.get('*', (req, res) => {
@@ -605,6 +659,13 @@ async function startServer() {
       logger.info('✅ Worker registry index seeded (delhi_workers)');
     } catch (workErr) {
       logger.warn('⚠️  Worker registry index seed failed (non-fatal)', { error: workErr.message });
+    }
+
+    try {
+      await initLiveData();
+      logger.info('✅ Live data streams initialised (wages, news, stats)');
+    } catch (liveErr) {
+      logger.warn('⚠️  Live data init failed (non-fatal)', { error: liveErr.message });
     }
 
   } else {

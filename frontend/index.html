@@ -85,6 +85,48 @@
         </div>
       </div>
 
+      <!-- ─── Live Worker Stats Bar ─── -->
+      <div class="sb-section">
+        <div class="sb-section-label">
+          <span>📊</span> Live Worker Stats
+          <span class="live-badge" id="stats-live-badge">● LIVE</span>
+        </div>
+        <p class="sb-hint" id="stats-fetchedAt">Fetching from Elastic…</p>
+        <div class="live-stats-grid" id="live-stats-grid">
+          <div class="live-stat-card">
+            <div class="live-stat-num" id="stat-total-workers">--</div>
+            <div class="live-stat-label">eShram Indexed</div>
+          </div>
+          <div class="live-stat-card">
+            <div class="live-stat-num" id="stat-bocw">--</div>
+            <div class="live-stat-label">BOCW Registered</div>
+          </div>
+          <div class="live-stat-card live-stat-card--alert">
+            <div class="live-stat-num" id="stat-underpaid">--</div>
+            <div class="live-stat-label">Underpaid</div>
+          </div>
+          <div class="live-stat-card">
+            <div class="live-stat-num" id="stat-avg-wage">--</div>
+            <div class="live-stat-label">Avg Wage/Day</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Labour News Feed ─── -->
+      <div class="sb-section">
+        <div class="sb-section-label">
+          <span>📰</span> Labour News
+          <span class="live-badge" id="news-live-badge">● PIB/MoLE</span>
+        </div>
+        <p class="sb-hint">Latest govt circulars &amp; notifications</p>
+        <div id="news-feed" class="news-feed">
+          <div class="news-loading">
+            <div class="news-pulse"></div>
+            <span>Fetching latest circulars…</span>
+          </div>
+        </div>
+      </div>
+
       <!-- ─── Geo Office Finder ─── -->
       <div class="sb-section">
         <div class="sb-section-label">
@@ -190,10 +232,10 @@
       </div>
 
       <div class="topbar-center">
-        <div class="aqi-pill" id="aqi-pill" style="border-color:var(--elastic); background:rgba(0,191,179,0.05)">
-          <span class="aqi-pill-dot" style="background:var(--elastic)"></span>
-          <span class="aqi-pill-label" style="color:var(--t2)">Registry Status</span>
-          <span class="aqi-pill-stage" style="color:var(--elastic); border-left:none; padding-left:0">eShram Connected</span>
+        <div class="aqi-pill" id="data-status-pill" style="border-color:var(--elastic); background:rgba(0,191,179,0.05); cursor:default">
+          <span class="aqi-pill-dot" id="data-stream-dot" style="background:var(--elastic)"></span>
+          <span class="aqi-pill-label" style="color:var(--t2)">Live Data</span>
+          <span class="aqi-pill-stage" id="data-stream-label" style="color:var(--elastic); border-left:none; padding-left:0">Connecting…</span>
         </div>
       </div>
 

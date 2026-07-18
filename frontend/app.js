@@ -229,17 +229,17 @@ const WorkerRegistry = {
       return;
     }
     D.workerResult.innerHTML = workers.map(w => {
-      let minRate = 743;
-      if (w.skillCategory === 'semi-skilled') minRate = 817;
-      if (w.skillCategory === 'skilled') minRate = 899;
+      // Use live wage rates from Elastic (falls back to built-ins if unavailable)
+      const minRate = LiveWages.getMin(w.skillCategory);
 
       const isCompliant = w.dailyWagePaid >= minRate;
-      const statusBadge = isCompliant 
-        ? `<span class="geo-dist-badge" style="color:var(--green); background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25)">🟢 Compliant</span>`
-        : `<span class="geo-dist-badge" style="color:var(--red); background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.25)">🔴 Underpaid</span>`;
+      const diff = Math.round(minRate - w.dailyWagePaid);
+      const statusBadge = isCompliant
+        ? `<span class="wage-badge wage-badge--compliant">🟢 Compliant</span>`
+        : `<span class="wage-badge wage-badge--underpaid">🔴 Underpaid by ₹${diff}/day</span>`;
 
       return `
-        <div class="geo-office-card" style="border-color:${isCompliant ? 'var(--b2)' : 'var(--red)25'}">
+        <div class="geo-office-card" style="border-color:${isCompliant ? 'var(--b2)' : 'rgba(239,68,68,.25)'}">
           <div class="geo-rank-row">
             <span class="geo-rank-label">${esc(w.skillCategory.toUpperCase())}</span>
             ${statusBadge}
@@ -247,7 +247,9 @@ const WorkerRegistry = {
           <div class="geo-office-name">${esc(w.nameHindi)} (${esc(w.name)})</div>
           <div class="geo-detail"><strong>UAN:</strong> ${esc(w.uan)}</div>
           <div class="geo-detail"><strong>Occupation:</strong> ${esc(w.occupationHindi)}</div>
-          <div class="geo-detail"><strong>Daily Wage:</strong> ₹${w.dailyWagePaid}/day (Min: ₹${minRate})</div>
+          <div class="geo-detail"><strong>Daily Wage:</strong> ₹${w.dailyWagePaid}/day
+            <span style="color:var(--t3)"> (Min: ₹${minRate} — <em>Live</em>)</span>
+          </div>
           <div class="geo-detail"><strong>Employer:</strong> ${esc(w.currentEmployer)}</div>
           <div class="geo-detail"><strong>BOCW Registered:</strong> ${w.bocwRegistered ? '✅ Yes' : '❌ No'}</div>
           <div class="geo-detail"><strong>State of Origin:</strong> ${esc(w.stateOfOriginHindi)}</div>
@@ -276,9 +278,7 @@ const WorkerRegistry = {
   }
 };
 
-function hideGRAP() {
-  D.grapBanner.classList.remove('visible');
-}
+
 
 // ══════════════════════════════════════════════════════════════════
 // GEO MANAGER
@@ -379,6 +379,153 @@ async function healthCheck() {
     D.elasticDot.className = 'status-dot offline';
   }
 }
+
+// ══════════════════════════════════════════════════════════════════
+// LIVE STATS MANAGER — Real-time Elastic aggregations
+// ══════════════════════════════════════════════════════════════════
+const LiveStats = {
+  _lastData: null,
+
+  async init() {
+    await this.fetch();
+    setInterval(() => this.fetch(), 30_000); // refresh every 30s
+  },
+
+  async fetch() {
+    try {
+      const r = await fetch(`${API}/api/live-stats`);
+      if (!r.ok) return;
+      const d = await r.json();
+      this._lastData = d;
+      this.render(d);
+    } catch { /* keep last state */ }
+  },
+
+  animateNum(el, newVal) {
+    const prev = el.textContent;
+    if (prev === newVal) return;
+    el.classList.remove('updated');
+    void el.offsetWidth; // reflow
+    el.classList.add('updated');
+    el.textContent = newVal;
+  },
+
+  render(d) {
+    const total   = document.getElementById('stat-total-workers');
+    const bocw    = document.getElementById('stat-bocw');
+    const under   = document.getElementById('stat-underpaid');
+    const avgW    = document.getElementById('stat-avg-wage');
+    const hint    = document.getElementById('stats-fetchedAt');
+    const badge   = document.getElementById('stats-live-badge');
+    const pill    = document.getElementById('data-stream-label');
+    const pillDot = document.getElementById('data-stream-dot');
+
+    if (total) this.animateNum(total, String(d.totalWorkers ?? '--'));
+    if (bocw)  this.animateNum(bocw,  String(d.bocwRegistered ?? '--'));
+    if (under) this.animateNum(under, String(d.underpaidCount ?? '--'));
+    if (avgW)  this.animateNum(avgW,  d.avgWage ? `₹${d.avgWage}` : '--');
+
+    const ts = d.fetchedAt ? new Date(d.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+    if (hint) hint.textContent = `Last updated: ${ts} · ${d.live ? 'Elastic Live' : 'Cached'}`;
+
+    if (badge) {
+      badge.style.background = d.live ? 'rgba(16,185,129,.12)' : 'rgba(251,191,36,.12)';
+      badge.style.color      = d.live ? 'var(--green)' : 'var(--yellow)';
+      badge.style.borderColor= d.live ? 'rgba(16,185,129,.28)' : 'rgba(251,191,36,.28)';
+      badge.textContent      = d.live ? '● LIVE' : '○ Cached';
+    }
+
+    // Update topbar data pill
+    if (pill) {
+      const streams = [d.totalWorkers, d.bocwRegistered].filter(x => x !== undefined).length;
+      pill.textContent = `${streams} Streams Live`;
+    }
+    if (pillDot) pillDot.style.background = d.live ? 'var(--green)' : 'var(--yellow)';
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// NEWS FEED MANAGER — Labour circulars from PIB RSS / Elastic
+// ══════════════════════════════════════════════════════════════════
+const NewsFeed = {
+  async init() {
+    await this.fetch();
+    setInterval(() => this.fetch(), 5 * 60_000); // refresh every 5 min
+  },
+
+  async fetch() {
+    try {
+      const r = await fetch(`${API}/api/news`);
+      if (!r.ok) return;
+      const d = await r.json();
+      this.render(d);
+    } catch { /* keep last state */ }
+  },
+
+  render(d) {
+    const el  = document.getElementById('news-feed');
+    const badge = document.getElementById('news-live-badge');
+    if (!el) return;
+
+    const items = d.items ?? [];
+    if (!items.length) {
+      el.innerHTML = `<div class="geo-empty"><div class="geo-empty-icon">📭</div><p>No circulars available</p></div>`;
+      return;
+    }
+
+    el.innerHTML = items.map(item => {
+      const dateStr = item.publishedAt
+        ? new Date(item.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
+      const href = item.link && item.link.startsWith('http') ? item.link : '#';
+      return `
+        <a class="news-item" href="${esc(href)}" target="_blank" rel="noopener noreferrer">
+          <div class="news-item-source">${esc(item.source ?? 'Govt. Notice')}</div>
+          <div class="news-item-title">${esc(item.title ?? '')}</div>
+          ${dateStr ? `<div class="news-item-date">📅 ${dateStr}</div>` : ''}
+        </a>
+      `;
+    }).join('');
+
+    if (badge) {
+      badge.style.background  = d.live ? 'rgba(16,185,129,.12)' : 'rgba(251,191,36,.12)';
+      badge.style.color       = d.live ? 'var(--green)' : 'var(--yellow)';
+      badge.style.borderColor = d.live ? 'rgba(16,185,129,.28)' : 'rgba(251,191,36,.28)';
+      badge.textContent       = d.live ? '● PIB Live' : '○ Archived';
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════
+// LIVE WAGES MANAGER — Official minimum wage rates from Elastic
+// ══════════════════════════════════════════════════════════════════
+const LiveWages = {
+  rates: null,
+
+  async init() {
+    try {
+      const r = await fetch(`${API}/api/wages/live`);
+      if (!r.ok) return;
+      const d = await r.json();
+      this.rates = d.rates ?? null;
+      // Update footer indicator
+      const footer = document.querySelector('.input-footer span:first-child');
+      if (footer && d.live) footer.textContent = `⚡ Elastic · Live Wages ${new Date(d.fetchedAt).toLocaleDateString('en-IN')}`;
+    } catch { /* keep static */ }
+  },
+
+  // Returns the daily minimum for a skill category (falls back to built-ins)
+  getMin(category) {
+    if (this.rates) {
+      const r = this.rates.find(x => x.category === category);
+      if (r) return r.daily;
+    }
+    const fallback = { unskilled: 743, 'semi-skilled': 817, skilled: 899, 'highly-skilled': 988 };
+    return fallback[category] ?? 743;
+  },
+};
+
+
 
 // ══════════════════════════════════════════════════════════════════
 // CHAT ENGINE
@@ -626,9 +773,14 @@ async function boot() {
   resolveDOM();
   setupInput();
 
+  // LiveWages must init first — WorkerRegistry.render() uses its rates
+  await LiveWages.init();
+
   await Promise.allSettled([
     Personas.init(),
     Stats.init(),
+    LiveStats.init(),
+    NewsFeed.init(),
     healthCheck(),
   ]);
 

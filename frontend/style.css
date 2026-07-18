@@ -961,3 +961,157 @@ body {
   .input-dock { padding: 10px 10px 12px; }
   .aqi-pill-label { display: none; }
 }
+
+/* ================================================================
+   LIVE DATA UI — Real-Time Panels
+   ================================================================ */
+
+/* ── LIVE badge ──────────────────────────────────────────────── */
+.live-badge {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: rgba(16,185,129,.12);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.35); }
+  50%       { box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+}
+
+/* ── Live Stats Grid ─────────────────────────────────────────── */
+.live-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.live-stat-card {
+  background: var(--bg3);
+  border: 1px solid var(--b2);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  text-align: center;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.live-stat-card:hover { border-color: var(--b3); transform: translateY(-1px); }
+.live-stat-card--alert { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.04); }
+.live-stat-card--alert .live-stat-num { color: var(--red); }
+.live-stat-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--elastic);
+  line-height: 1.1;
+  transition: color .3s var(--ease);
+}
+.live-stat-num.updated {
+  animation: numFlash .4s var(--ease);
+}
+@keyframes numFlash {
+  0%   { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.live-stat-label {
+  font-size: .6rem;
+  font-weight: 600;
+  color: var(--t2);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+/* ── News Feed ───────────────────────────────────────────────── */
+.news-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--b2) transparent;
+}
+.news-item {
+  background: var(--bg3);
+  border: 1px solid var(--b2);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  text-decoration: none;
+  display: block;
+}
+.news-item:hover {
+  background: var(--bg4);
+  border-color: rgba(0,191,179,.35);
+}
+.news-item-source {
+  font-size: .58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--elastic);
+  margin-bottom: 4px;
+}
+.news-item-title {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--t1);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.news-item-date {
+  font-size: .6rem;
+  color: var(--t3);
+  margin-top: 4px;
+}
+.news-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--t2);
+  font-size: .72rem;
+  padding: 10px;
+}
+.news-pulse {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--elastic);
+  animation: livePulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Wages Ticker in topbar pill ────────────────────────────── */
+#data-stream-label {
+  transition: color .3s var(--ease);
+}
+#data-stream-dot {
+  transition: background .3s var(--ease);
+}
+
+/* ── Wage Badge (in worker result cards) ────────────────────── */
+.wage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .6rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+.wage-badge--compliant { color: var(--green); background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.25); }
+.wage-badge--underpaid { color: var(--red);   background: rgba(239,68,68,.1);  border-color: rgba(239,68,68,.25); }
+
