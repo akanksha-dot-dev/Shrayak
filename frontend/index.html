@@ -13,20 +13,6 @@
 </head>
 <body>
 
-<!-- GRAP Emergency Banner -->
-<div id="grap-banner" class="grap-banner" role="alert" aria-live="assertive">
-  <div class="grap-inner">
-    <div class="grap-left">
-      <span id="grap-emoji" class="grap-pulse-icon">🚨</span>
-      <div>
-        <div id="grap-title" class="grap-title">GRAP Alert</div>
-        <div id="grap-message" class="grap-msg"></div>
-      </div>
-    </div>
-    <button id="grap-dismiss" class="grap-close">✕</button>
-  </div>
-</div>
-
 <!-- Root App -->
 <div class="root">
 
@@ -74,45 +60,27 @@
         </div>
       </div>
 
-      <!-- ─── AQI Panel ─── -->
+      <!-- ─── Worker Registry Search Panel ─── -->
       <div class="sb-section">
         <div class="sb-section-label">
-          <span>🌫️</span> Delhi AQI
-          <span class="live-dot"></span>
-          <span class="live-text">LIVE</span>
+          <span>👥</span> Worker Registry
+          <span class="elastic-badge">eShram Search</span>
         </div>
-
-        <div class="aqi-card" id="aqi-card">
-          <div class="aqi-top">
-            <div class="aqi-ring-wrap">
-              <svg class="aqi-ring" viewBox="0 0 120 120">
-                <circle class="aqi-ring-bg" cx="60" cy="60" r="50" />
-                <circle class="aqi-ring-fill" id="aqi-ring-fill" cx="60" cy="60" r="50"
-                  stroke-dasharray="314" stroke-dashoffset="314"
-                  stroke-linecap="round" transform="rotate(-90 60 60)" />
-              </svg>
-              <div class="aqi-ring-center">
-                <span class="aqi-num" id="gauge-number">--</span>
-                <span class="aqi-unit">AQI</span>
-              </div>
-            </div>
-            <div class="aqi-meta">
-              <div class="aqi-row">
-                <span class="aqi-lbl">Stage</span>
-                <span id="grap-stage-label" class="aqi-val">--</span>
-              </div>
-              <div class="aqi-row">
-                <span class="aqi-lbl">Source</span>
-                <span id="aqi-source" class="aqi-val aqi-val--sm">--</span>
-              </div>
-              <div class="aqi-row">
-                <span class="aqi-lbl">Construction</span>
-                <span id="construction-status" class="aqi-val">--</span>
-              </div>
-            </div>
-          </div>
-          <div class="aqi-advisory" id="aqi-advisory-box">
-            <p id="aqi-advisory-text">Loading advisory…</p>
+        <p class="sb-hint">Verify eShram UAN registry and wage compliance status</p>
+        <div class="geo-search">
+          <input id="worker-search-input" class="geo-input" type="text"
+            placeholder="Name or UAN (e.g. Ramesh)"
+            aria-label="Worker name or UAN" />
+          <button id="worker-search-btn" class="geo-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+          </button>
+        </div>
+        <div id="worker-result" class="geo-result">
+          <div class="geo-empty">
+            <div class="geo-empty-icon">🔍</div>
+            <p>Enter worker name or UAN to verify minimum wage compliance</p>
           </div>
         </div>
       </div>
@@ -222,11 +190,10 @@
       </div>
 
       <div class="topbar-center">
-        <div class="aqi-pill" id="aqi-pill">
-          <span class="aqi-pill-dot" id="aqi-dot"></span>
-          <span class="aqi-pill-label">Delhi AQI</span>
-          <span class="aqi-pill-num" id="aqi-value">--</span>
-          <span class="aqi-pill-stage" id="aqi-grap">Loading…</span>
+        <div class="aqi-pill" id="aqi-pill" style="border-color:var(--elastic); background:rgba(0,191,179,0.05)">
+          <span class="aqi-pill-dot" style="background:var(--elastic)"></span>
+          <span class="aqi-pill-label" style="color:var(--t2)">Registry Status</span>
+          <span class="aqi-pill-stage" style="color:var(--elastic); border-left:none; padding-left:0">eShram Connected</span>
         </div>
       </div>
 
