@@ -239,15 +239,18 @@ async function getWageRates() {
     const hits = res.hits?.hits ?? [];
     if (!hits.length) throw new Error('Empty wages index');
 
-    // Deduplicate by skill_category — keep highest daily_rate
+    // Deduplicate by category — only use daily-rate records
     const byCategory = {};
     hits.forEach(h => {
       const src = h._source ?? {};
-      const cat = (src.skill_category ?? src.category ?? '').toLowerCase().replace(/ /g, '-');
-      const daily = parseFloat(src.daily_rate ?? src.daily ?? 0);
-      const monthly = parseFloat(src.monthly_rate ?? src.monthly ?? 0);
+      const cat   = (src.category ?? '').toLowerCase().replace(/ /g, '-');
+      const daily = parseFloat(src.dailyRateINR ?? 0);
+      const monthly = parseFloat(src.monthlyRateINR ?? 0);
+      // Only use 'daily' rateType to avoid duplicates from overtime docs
+      if (src.rateType !== 'daily' && src.rateType !== undefined) return;
+      if (!cat || !daily) return;
       if (!byCategory[cat] || daily > byCategory[cat].daily) {
-        byCategory[cat] = { category: cat, labelHindi: src.category_hindi ?? src.label_hindi ?? cat, daily, monthly };
+        byCategory[cat] = { category: cat, labelHindi: src.shortName ?? cat, daily, monthly };
       }
     });
 
