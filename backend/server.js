@@ -503,7 +503,9 @@ app.get('/api/personas', (req, res) => {
     geoFocused:   p.geoFocused,
     vulnerabilities: p.vulnerabilities,
     starterQuestions: p.starterQuestions,
+    starterQuestionsEn: p.starterQuestionsEn,
     welcomeMessage: p.welcomeMessage,
+    welcomeMessageEn: p.welcomeMessageEn,
   }));
   return res.status(200).json({ personas });
 });
