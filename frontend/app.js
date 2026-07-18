@@ -14,6 +14,7 @@ const state = {
   aqiData:          null,
   loading:          false,
   rateLimitedUntil: 0,
+  language:         'hi',
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -24,6 +25,9 @@ let D = {};
 function resolveDOM() {
   const g = id => document.getElementById(id);
   D = {
+    // Language
+    langHiBtn:    g('lang-hi-btn'),
+    langEnBtn:    g('lang-en-btn'),
     // Worker Registry
     workerInput:  g('worker-search-input'),
     workerBtn:    g('worker-search-btn'),
