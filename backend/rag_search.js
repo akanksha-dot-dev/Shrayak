@@ -62,6 +62,7 @@ const { generateMockEmbedding, INDEX_NAME } = require('./ingest_wages');
 const { getOfficeByPin, getOfficesByDistrict, formatOfficeForChat } = require('./labourOffices');
 const winston = require('winston');
 const { v4: uuidv4 } = require('uuid');
+const { generateLocalResponse } = require('./localKnowledge');
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
 const logger = winston.createLogger({
@@ -680,19 +681,70 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
       latencyMs:     telemetry.latencyTotalMs,
     };
   } catch (err) {
-    telemetry.latencyTotalMs = Date.now() - totalStart;
-    telemetry.success        = false;
-    telemetry.errorCode      = err.code ?? 'UNKNOWN';
-    telemetry.errorMessage   = err.message;
-    logAgentRequest(telemetry); // Log failures too
-
-    logger.error('[rag_search] RAG pipeline error', {
+    // ── Graceful Fallback: Local Knowledge Engine ───────────────────────
+    logger.warn('[rag_search] Gemini RAG pipeline failed, falling back to Local Knowledge Engine', {
       requestId,
-      error:      err.message,
-      errorCode:  err.code,
+      error: err.message,
     });
 
-    throw err;
+    try {
+      // Perform Elastic search again/fallback-search to ensure we have hits
+      let fallbackHits = [];
+      try {
+        const intent = classifyIntent(sanitizedQuery);
+        const searchResult = await performRAGSearch(sanitizedQuery, {
+          k: 3,
+          numCandidates: 20,
+          categories: intent,
+          hybridMode: false,
+        });
+        fallbackHits = searchResult.hits;
+      } catch (searchErr) {
+        logger.warn('[rag_search] Fallback Elastic search also failed, utilizing cached knowledge base only');
+      }
+
+      const localResult = generateLocalResponse(sanitizedQuery, fallbackHits);
+
+      telemetry.latencyTotalMs = Date.now() - totalStart;
+      telemetry.success        = true; // Fallback succeeded
+      telemetry.isFallback     = true;
+      logAgentRequest(telemetry);
+
+      return {
+        response:      localResult.response,
+        citations:     localResult.citations,
+        nearestOffice: officeInfo,
+        requestId,
+        latencyMs:     telemetry.latencyTotalMs,
+        _fallback:     true,
+      };
+    } catch (fallbackErr) {
+      telemetry.latencyTotalMs = Date.now() - totalStart;
+      telemetry.success        = false;
+      telemetry.errorCode      = fallbackErr.code ?? 'FALLBACK_FAILED';
+      telemetry.errorMessage   = fallbackErr.message;
+      logAgentRequest(telemetry);
+
+      logger.error('[rag_search] Critical failure in both Gemini and Local Fallback', {
+        requestId,
+        error: fallbackErr.message,
+      });
+
+      // Ultimate hard-coded fallback text so the chat client NEVER breaks
+      return {
+        response: `नमस्ते! क्षमा करें, तकनीकी कारणों से मैं अभी ऑनलाइन जवाब नहीं बना पा रहा हूँ।
+
+आप निम्नलिखित सहायता माध्यमों से संपर्क कर सकते हैं:
+📞 दिल्ली श्रम हेल्पलाइन: 1800-11-2345 (Toll-Free, निःशुल्क)
+📱 ई-श्रम हेल्पलाइन: 14434
+
+कृपया थोड़ी देर बाद अपना प्रश्न दोबारा पूछें।`,
+        citations: [],
+        nearestOffice: officeInfo,
+        requestId,
+        latencyMs: telemetry.latencyTotalMs,
+      };
+    }
   }
 }
 
