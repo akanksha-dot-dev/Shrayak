@@ -123,7 +123,7 @@ async function ensureNewsIndex(client) {
               '@indexed_at': { type: 'date' },
             },
           },
-          settings: { number_of_shards: 1, number_of_replicas: 0 },
+          // NOTE: No settings block — Elastic Serverless manages shards/replicas automatically
         },
       });
       console.log(`[liveData] Created index '${NEWS_INDEX}'`);
