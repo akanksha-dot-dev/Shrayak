@@ -38,7 +38,7 @@ This is the power of **Shrayak** — grounded in real law, accessible in Hindi, 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (Vanilla JS / HTML)                          │
-│   Mobile-First WhatsApp-style Chat UI  │  Hindi/English Toggle               │
+│   Mobile-First WhatsApp-style Chat UI / Web App │  Hindi/English Toggle               │
 │   Quick-Question Chips  │  District Selector  │  PWA-ready                  │
 └────────────────────────────────┬─────────────────────────────────────────────┘
                                  │ HTTPS (Helmet HSTS)
