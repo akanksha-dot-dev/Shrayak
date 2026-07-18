@@ -570,7 +570,7 @@ async function sendMsg(override) {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
         query:      text,
-        language:   state.persona?.language ?? 'hi',
+        language:   state.language ?? 'hi',
         ...(pin                && { pinCode: pin }),
         ...(state.persona?.id  && { personaId: state.persona.id }),
       }),
