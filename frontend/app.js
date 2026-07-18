@@ -735,6 +735,46 @@ function setupInput() {
     D.sidebar.classList.remove('open');
     D.sbOverlay.classList.remove('show');
   });
+
+  // Language buttons
+  D.langHiBtn?.addEventListener('click', () => setLanguage('hi'));
+  D.langEnBtn?.addEventListener('click', () => setLanguage('en'));
+}
+
+function setLanguage(lang) {
+  if (state.language === lang) return;
+  state.language = lang;
+
+  D.langHiBtn?.classList.toggle('active', lang === 'hi');
+  D.langEnBtn?.classList.toggle('active', lang === 'en');
+
+  const isEn = lang === 'en';
+  toast(isEn ? 'Language set to English' : 'भाषा हिन्दी चुनी गई');
+
+  // Translate basic UI labels dynamically
+  const labels = {
+    'worker-search-input': isEn ? 'Name or UAN (e.g. Ramesh)' : 'नाम या UAN (जैसे: रमेश)',
+    'pin-input': isEn ? 'Pin code (e.g. 110092)' : 'पिन कोड (जैसे: 110092)',
+    'chat-input': isEn ? 'Type your question here... (Hindi or English)' : 'अपना सवाल यहाँ टाइप करें… (Hindi or English)',
+  };
+  for (const [id, txt] of Object.entries(labels)) {
+    const el = document.getElementById(id);
+    if (el) el.placeholder = txt;
+  }
+
+  // Update current active persona representation if selected
+  if (state.persona) {
+    Personas.select(state.persona.id);
+  } else {
+    // Welcome message fallback refresh
+    D.messages.innerHTML = '';
+    const welcomeText = isEn 
+      ? `🙏 **Welcome to Shrayak!** 
+I am now ready to answer your questions in English. Let's discuss your labour rights. Please select a worker persona from the sidebar to begin.`
+      : `🙏 **नमस्ते! मैं Shrayak हूं — आपका श्रमिक अधिकार सहायक।**
+अब मैं आपके प्रश्नों के उत्तर हिन्दी में देने के लिए तैयार हूँ। चलिए आपके अधिकारों के बारे में बात करते हैं। कृपया आगे बढ़ने के लिए साइडबार से एक श्रमिक भूमिका चुनें।`;
+    addBotMsg(welcomeText, [], null, true);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
