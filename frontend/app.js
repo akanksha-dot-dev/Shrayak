@@ -655,6 +655,7 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
       <div class="msg-bubble">
+        <button class="msg-copy-btn" title="Copy response text" aria-label="Copy message text">📋 Copy</button>
         ${content}
         ${offHtml}
         ${cites}
@@ -662,6 +663,27 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
       <div class="msg-time">${now()} · Shrayak AI${latBadge}</div>
     </div>
   `;
+
+  // Attach copy event handler
+  const copyBtn = d.querySelector('.msg-copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      // Strip HTML tags for clean text copying
+      const cleanText = text.replace(/\*\*/g, '').replace(/<[^>]*>/g, '');
+      navigator.clipboard.writeText(cleanText).then(() => {
+        copyBtn.textContent = '✓ Copied';
+        copyBtn.classList.add('copied');
+        toast('📋 Response copied to clipboard');
+        setTimeout(() => {
+          copyBtn.textContent = '📋 Copy';
+          copyBtn.classList.remove('copied');
+        }, 2200);
+      }).catch(() => {
+        toast('❌ Copy failed');
+      });
+    });
+  }
+
   D.messages.appendChild(d);
   scrollBottom();
 }
@@ -837,11 +859,66 @@ function fallbackPersonas() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// PARTICLE CANVAS ANIMATION
+// ══════════════════════════════════════════════════════════════════
+function initParticles() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let width = 0, height = 0;
+
+  function resize() {
+    if (!canvas.parentElement) return;
+    width = canvas.width = canvas.parentElement.offsetWidth;
+    height = canvas.height = canvas.parentElement.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = Array.from({ length: 28 }, () => ({
+    x: Math.random() * (width || 800),
+    y: Math.random() * (height || 600),
+    r: Math.random() * 2 + 1,
+    vx: (Math.random() - 0.5) * 0.35,
+    vy: (Math.random() - 0.5) * 0.35,
+    alpha: Math.random() * 0.4 + 0.15,
+    color: Math.random() > 0.5 ? '#6366f1' : (Math.random() > 0.5 ? '#06b6d4' : '#00bfb3'),
+  }));
+
+  function animate() {
+    if (!width || !height) {
+      resize();
+    }
+    ctx.clearRect(0, 0, width, height);
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = p.color;
+      ctx.fill();
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ══════════════════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════════════════
 async function boot() {
   resolveDOM();
   setupInput();
+  initParticles();
 
   // LiveWages must init first — WorkerRegistry.render() uses its rates
   await LiveWages.init();
