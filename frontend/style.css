@@ -1,7 +1,7 @@
 /* ================================================================
-   Shrayak — style.css  (v3 — Production Ready)
+   Shrayak — style.css  (v4 — Enhanced)
    ================================================================ */
-/*added
+
 /* ── Variables ─────────────────────────────────────────────────── */
 :root {
   --bg0: #060c1a;
@@ -397,6 +397,13 @@ body {
 
 .persona-card.active::after {
   transform: scaleY(1);
+}
+
+/* Active glow ring around persona avatar */
+.persona-card.active .persona-avi {
+  box-shadow: 0 0 0 2px var(--pc, var(--indigo)), 0 0 12px rgba(99, 102, 241, 0.35);
+  border: 1.5px solid var(--pc, var(--indigo));
+  transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 
 .persona-avi {
@@ -977,6 +984,90 @@ body {
   z-index: 1;
 }
 
+/* ── Thinking Progress Bar ────────────────────────────────── */
+.thinking-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.thinking-bar.active {
+  opacity: 1;
+}
+
+.thinking-bar-fill {
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--indigo), var(--cyan), transparent);
+  animation: thinkScroll 1.4s ease-in-out infinite;
+}
+
+@keyframes thinkScroll {
+  from { transform: translateX(-200%); }
+  to   { transform: translateX(350%); }
+}
+
+/* ── Scroll-to-bottom FAB ─────────────────────────────────── */
+.scroll-fab {
+  position: absolute;
+  bottom: 80px;
+  right: 18px;
+  z-index: 10;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1.5px solid var(--b3);
+  color: var(--t2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: all var(--dur) var(--ease);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+.scroll-fab.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.scroll-fab:hover {
+  background: var(--indigo);
+  border-color: var(--indigo-lt);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(99,102,241,0.4);
+}
+
+.scroll-fab-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  background: var(--indigo);
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
 /* Chat bar */
 .chat-bar {
   display: flex;
@@ -1218,6 +1309,109 @@ body {
   border-color: var(--green);
 }
 
+/* ── Message reaction row ──────────────────────────────────── */
+.msg-reactions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+  padding-left: 2px;
+}
+
+.msg--bot:hover .msg-reactions {
+  opacity: 1;
+}
+
+.react-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  color: var(--t3);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: all var(--dur) var(--ease);
+  white-space: nowrap;
+}
+
+.react-btn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--b2);
+  color: var(--t1);
+}
+
+.react-btn.active-up {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--green);
+}
+
+.react-btn.active-down {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--red);
+}
+
+.react-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--b2);
+  margin: 0 2px;
+}
+
+/* ── Stream cursor blink ───────────────────────────────────── */
+.stream-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--indigo-lt);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  animation: cursorBlink 0.8s ease-in-out infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ── Markdown rendered elements ────────────────────────────── */
+.msg-bubble h3 {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--indigo-lt);
+  margin: 8px 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.msg-bubble code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78em;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--indigo-lt);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.msg-bubble ol {
+  list-style: decimal;
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.msg-bubble ol li,
+.msg-bubble ul li {
+  margin: 2px 0;
+  line-height: 1.65;
+}
+
 /* Welcome cards grid */
 .welcome-grid {
   display: grid;
@@ -1455,6 +1649,40 @@ body {
   opacity: 0.45;
 }
 
+/* ── Mic button ─────────────────────────────────────────────── */
+.mic-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--b2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t3);
+  flex-shrink: 0;
+  transition: all var(--dur) var(--ease);
+}
+
+.mic-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--red);
+}
+
+.mic-btn.recording {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--red);
+  color: var(--red);
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+
 .input-footer {
   display: flex;
   align-items: center;
@@ -1579,6 +1807,71 @@ body {
   .aqi-pill-label {
     display: none;
   }
+}
+
+/* ── Sidebar collapse ───────────────────────────────────────── */
+.sb-collapse-btn {
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg2);
+  border: 1.5px solid var(--b2);
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  z-index: 10;
+  transition: all var(--dur) var(--ease);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+.sb-collapse-btn:hover {
+  background: var(--indigo);
+  border-color: var(--indigo-lt);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+}
+
+/* Collapsed sidebar state */
+.sidebar.collapsed {
+  width: 58px;
+  min-width: 58px;
+}
+
+.sidebar.collapsed .sb-body,
+.sidebar.collapsed .sb-chips,
+.sidebar.collapsed .sb-tagline {
+  display: none;
+}
+
+.sidebar.collapsed .sb-name {
+  display: none;
+}
+
+.sidebar.collapsed .sb-brand {
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar.collapsed .sb-logo svg {
+  margin: 0 auto;
+}
+
+.sidebar.collapsed .sb-logo > div {
+  display: none;
+}
+
+.sidebar {
+  position: relative;
+  transition: width 0.28s var(--ease), min-width 0.28s var(--ease);
 }
 
 /* ================================================================
