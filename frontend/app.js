@@ -62,6 +62,12 @@ function resolveDOM() {
     sbOverlay:    g('sb-overlay'),
     // Toast
     toast:        g('toast'),
+    // New elements
+    thinkingBar:  g('thinking-bar'),
+    scrollFab:    g('scroll-fab'),
+    scrollFabBadge: g('scroll-fab-badge'),
+    micBtn:       g('mic-btn'),
+    sbCollapseBtn: g('sb-collapse-btn'),
   };
 }
 
@@ -74,11 +80,26 @@ function esc(str) {
   return d.innerHTML;
 }
 
+/**
+ * Enhanced markdown renderer: supports **bold**, ### headers,
+ * `inline code`, numbered lists (1. ...), bullet lists, and newlines.
+ */
 function fmt(text) {
   if (!text) return '';
   let s = esc(text);
+  // Bold
   s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // ### Headers
+  s = s.replace(/(^|&lt;br&gt;|<br>)###\s+(.+)/g, '$1<h3>$2</h3>');
+  // Inline code `...`
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Newlines to <br>
   s = s.replace(/\n/g, '<br>');
+  // Numbered lists: replace lines starting with "1. ", "2. ", etc.
+  s = s.replace(/((?:^|<br>)\s*)([0-9]+)\.\s+/g, (m, pre, num) => {
+    return `${pre}<span style="color:var(--indigo-lt);font-weight:700">${num}.</span>&nbsp;`;
+  });
+  // Bullet lists
   s = s.replace(/(^|<br>)\s*[-•]\s+/g, '$1&nbsp;&nbsp;• ');
   return s;
 }
@@ -102,6 +123,44 @@ function scrollBottom() {
 function autoResize() {
   D.chatInput.style.height = 'auto';
   D.chatInput.style.height = Math.min(D.chatInput.scrollHeight, 140) + 'px';
+}
+
+// ── Thinking bar ───────────────────────────────────────────────────────────────
+function setThinking(on) {
+  D.thinkingBar?.classList.toggle('active', on);
+}
+
+// ── Scroll FAB ─────────────────────────────────────────────────────────────
+let _unreadCount = 0;
+let _userScrolledUp = false;
+
+function setupScrollFab() {
+  if (!D.messages || !D.scrollFab) return;
+
+  D.messages.addEventListener('scroll', () => {
+    const distFromBottom = D.messages.scrollHeight - D.messages.scrollTop - D.messages.clientHeight;
+    _userScrolledUp = distFromBottom > 80;
+    D.scrollFab.classList.toggle('visible', _userScrolledUp);
+    if (!_userScrolledUp) {
+      _unreadCount = 0;
+      if (D.scrollFabBadge) D.scrollFabBadge.style.display = 'none';
+    }
+  });
+
+  D.scrollFab.addEventListener('click', () => {
+    D.messages.scrollTo({ top: D.messages.scrollHeight, behavior: 'smooth' });
+    _unreadCount = 0;
+    if (D.scrollFabBadge) D.scrollFabBadge.style.display = 'none';
+  });
+}
+
+function bumpUnread() {
+  if (!_userScrolledUp) return;
+  _unreadCount++;
+  if (D.scrollFabBadge) {
+    D.scrollFabBadge.textContent = _unreadCount > 9 ? '9+' : String(_unreadCount);
+    D.scrollFabBadge.style.display = 'flex';
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -563,6 +622,7 @@ async function sendMsg(override) {
   const typingId = addTyping();
   state.loading = true;
   const t0 = Date.now();
+  setThinking(true);
 
   try {
     const res = await fetch(`${API}/api/chat`, {
@@ -577,6 +637,7 @@ async function sendMsg(override) {
     });
 
     removeTyping(typingId);
+    setThinking(false);
 
     if (res.status === 429) {
       state.rateLimitedUntil = Date.now() + 900_000;
@@ -594,16 +655,19 @@ async function sendMsg(override) {
     const ms = Date.now() - t0;
 
     addBotMsg(d.response ?? '❌ No response.', d.citations ?? [], d.nearestOffice ?? null, false, null, ms);
+    bumpUnread();
 
     // Refresh stats
     setTimeout(() => Stats.fetch(), 2000);
 
   } catch (err) {
     removeTyping(typingId);
+    setThinking(false);
     addBotMsg(`⚠️ माफ़ कीजिए, त्रुटि हुई। पुनः प्रयास करें।\n\n${err.message}\n\n📞 Helpline: 1800-11-2345`, [], null);
     toast('❌ Request failed');
   } finally {
     state.loading = false;
+    setThinking(false);
     D.sendBtn.disabled = (D.chatInput.value.trim().length === 0);
   }
 }
@@ -656,19 +720,31 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     <div class="msg-body">
       <div class="msg-bubble">
         <button class="msg-copy-btn" title="Copy response text" aria-label="Copy message text">📋 Copy</button>
-        ${content}
+        <div class="msg-content"></div>
         ${offHtml}
         ${cites}
+      </div>
+      <div class="msg-reactions">
+        <button class="react-btn" data-react="up" aria-label="Helpful">👍 Helpful</button>
+        <div class="react-sep"></div>
+        <button class="react-btn" data-react="down" aria-label="Not helpful">👎 Not helpful</button>
       </div>
       <div class="msg-time">${now()} · Shrayak AI${latBadge}</div>
     </div>
   `;
 
+  // Stream the content into .msg-content
+  const contentEl = d.querySelector('.msg-content');
+  if (!isWelcome) {
+    streamText(contentEl, content);
+  } else {
+    contentEl.innerHTML = content;
+  }
+
   // Attach copy event handler
   const copyBtn = d.querySelector('.msg-copy-btn');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      // Strip HTML tags for clean text copying
       const cleanText = text.replace(/\*\*/g, '').replace(/<[^>]*>/g, '');
       navigator.clipboard.writeText(cleanText).then(() => {
         copyBtn.textContent = '✓ Copied';
@@ -678,11 +754,19 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
           copyBtn.textContent = '📋 Copy';
           copyBtn.classList.remove('copied');
         }, 2200);
-      }).catch(() => {
-        toast('❌ Copy failed');
-      });
+      }).catch(() => toast('❌ Copy failed'));
     });
   }
+
+  // Reaction buttons
+  d.querySelectorAll('.react-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const reaction = btn.dataset.react;
+      d.querySelectorAll('.react-btn').forEach(b => b.classList.remove('active-up', 'active-down'));
+      btn.classList.add(reaction === 'up' ? 'active-up' : 'active-down');
+      toast(reaction === 'up' ? '👍 Thanks for the feedback!' : '👎 We\'ll improve our responses');
+    });
+  });
 
   D.messages.appendChild(d);
   scrollBottom();
@@ -712,6 +796,76 @@ function addTyping() {
 
 function removeTyping(id) {
   document.getElementById(id)?.remove();
+}
+
+// ──────────────────────────────────────────────────────────────────
+// STREAM TEXT ANIMATION
+// ──────────────────────────────────────────────────────────────────
+/**
+ * Streams HTML content into el character by character (on text nodes),
+ * skipping over HTML tags which are injected instantly.
+ */
+function streamText(el, html, onDone) {
+  // Parse into text segments and HTML tags
+  // We'll use a temp div to convert html to plain tokens
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  // Flatten to an array of { type: 'tag'|'text', value } tokens
+  const tokens = [];
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (node.textContent) tokens.push({ type: 'text', value: node.textContent });
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const openTag = node.outerHTML.replace(node.innerHTML + '</' + node.tagName.toLowerCase() + '>', '');
+      tokens.push({ type: 'tag-open', tag: node.tagName.toLowerCase(), el: node });
+      node.childNodes.forEach(walk);
+      tokens.push({ type: 'tag-close', tag: node.tagName.toLowerCase() });
+    }
+  }
+  // Simpler approach: stream at HTML-string level, injecting tag chars instantly
+  const chars = [...html]; // split by character
+  let i = 0;
+  let current = '';
+
+  // Add a cursor
+  const cursor = document.createElement('span');
+  cursor.className = 'stream-cursor';
+  el.appendChild(cursor);
+
+  const CHUNK = 3;  // characters to reveal per frame at low speed
+  const DELAY = 12; // ms per chunk
+
+  function step() {
+    if (i >= chars.length) {
+      el.innerHTML = html;
+      if (onDone) onDone();
+      return;
+    }
+
+    // Skip ahead through HTML tags instantly
+    if (chars[i] === '<') {
+      while (i < chars.length && chars[i] !== '>') {
+        current += chars[i++];
+      }
+      if (i < chars.length) current += chars[i++]; // include '>'
+      el.innerHTML = current + '<span class="stream-cursor"></span>';
+      setTimeout(step, 0); // don't delay on tags
+      return;
+    }
+
+    // Reveal CHUNK text characters
+    let added = 0;
+    while (i < chars.length && chars[i] !== '<' && added < CHUNK) {
+      current += chars[i++];
+      added++;
+    }
+    el.innerHTML = current + '<span class="stream-cursor"></span>';
+    D.messages.scrollTop = D.messages.scrollHeight;
+    setTimeout(step, DELAY);
+  }
+
+  step();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -761,6 +915,23 @@ function setupInput() {
   // Language buttons
   D.langHiBtn?.addEventListener('click', () => setLanguage('hi'));
   D.langEnBtn?.addEventListener('click', () => setLanguage('en'));
+
+  // Sidebar collapse toggle
+  let _sidebarCollapsed = false;
+  D.sbCollapseBtn?.addEventListener('click', () => {
+    _sidebarCollapsed = !_sidebarCollapsed;
+    D.sidebar.classList.toggle('collapsed', _sidebarCollapsed);
+    D.sbCollapseBtn.textContent = _sidebarCollapsed ? '▶' : '◀';
+    D.sbCollapseBtn.title = _sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  });
+
+  // Mic button — placeholder (Web Speech API roadmap)
+  D.micBtn?.addEventListener('click', () => {
+    toast('🎙️ Voice input coming soon! Use keyboard for now.');
+  });
+
+  // Scroll FAB
+  setupScrollFab();
 }
 
 function setLanguage(lang) {
@@ -875,22 +1046,44 @@ function initParticles() {
   resize();
   window.addEventListener('resize', resize);
 
-  const particles = Array.from({ length: 28 }, () => ({
+  const particles = Array.from({ length: 36 }, () => ({
     x: Math.random() * (width || 800),
     y: Math.random() * (height || 600),
-    r: Math.random() * 2 + 1,
-    vx: (Math.random() - 0.5) * 0.35,
-    vy: (Math.random() - 0.5) * 0.35,
-    alpha: Math.random() * 0.4 + 0.15,
+    r: Math.random() * 2.2 + 0.8,
+    vx: (Math.random() - 0.5) * 0.32,
+    vy: (Math.random() - 0.5) * 0.32,
+    alpha: Math.random() * 0.35 + 0.12,
     color: Math.random() > 0.5 ? '#6366f1' : (Math.random() > 0.5 ? '#06b6d4' : '#00bfb3'),
   }));
 
+  const CONNECTION_DIST = 110; // max px distance for a connection line
+
   function animate() {
-    if (!width || !height) {
-      resize();
-    }
+    if (!width || !height) resize();
     ctx.clearRect(0, 0, width, height);
 
+    // Draw connection lines between nearby particles
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i];
+        const b = particles[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONNECTION_DIST) {
+          const lineAlpha = (1 - dist / CONNECTION_DIST) * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = a.color;
+          ctx.globalAlpha = lineAlpha;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw particles
     for (const p of particles) {
       p.x += p.vx;
       p.y += p.vy;
@@ -903,10 +1096,13 @@ function initParticles() {
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = p.color;
       ctx.globalAlpha = p.alpha;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 8;
       ctx.shadowColor = p.color;
       ctx.fill();
     }
+
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
     requestAnimationFrame(animate);
   }
   animate();
