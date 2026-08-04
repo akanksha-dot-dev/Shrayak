@@ -46,7 +46,7 @@ function resolveDOM() {
     statLatency:  g('stat-latency'),
     statSuccess:  g('stat-success'),
     // Chat
-    chatAvatar:   g('chat-avatar'),
+    chatAvatar:   g('chat-persona-name') ? g('chat-avatar') : null,
     chatName:     g('chat-persona-name'),
     chatSub:      g('chat-persona-sub'),
     starters:     g('starter-questions'),
@@ -68,6 +68,15 @@ function resolveDOM() {
     scrollFabBadge: g('scroll-fab-badge'),
     micBtn:       g('mic-btn'),
     sbCollapseBtn: g('sb-collapse-btn'),
+    // Tool buttons & Modals
+    btnOpenCalc:      g('btn-open-calc'),
+    btnOpenHelplines: g('btn-open-helplines'),
+    calcModal:        g('wage-calc-modal'),
+    calcBackdrop:     g('calc-modal-backdrop'),
+    calcClose:        g('calc-modal-close'),
+    helplineModal:    g('helpline-modal'),
+    helplineBackdrop: g('helpline-modal-backdrop'),
+    helplineClose:    g('helpline-modal-close'),
   };
 }
 
@@ -719,7 +728,10 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
       <div class="msg-bubble">
-        <button class="msg-copy-btn" title="Copy response text" aria-label="Copy message text">📋 Copy</button>
+        <div class="msg-bubble-tools" style="display:flex;gap:6px;position:absolute;top:8px;right:10px;">
+          <button class="msg-tts-btn" title="Listen to response (Audio Read-Aloud)" aria-label="Listen to response">🔊 Listen</button>
+          <button class="msg-copy-btn" title="Copy response text" aria-label="Copy message text">📋 Copy</button>
+        </div>
         <div class="msg-content"></div>
         ${offHtml}
         ${cites}
@@ -755,6 +767,14 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
           copyBtn.classList.remove('copied');
         }, 2200);
       }).catch(() => toast('❌ Copy failed'));
+    });
+  }
+
+  // Attach TTS Audio Read-Aloud event handler
+  const ttsBtn = d.querySelector('.msg-tts-btn');
+  if (ttsBtn) {
+    ttsBtn.addEventListener('click', () => {
+      VoiceAssistant.speak(text, ttsBtn);
     });
   }
 
