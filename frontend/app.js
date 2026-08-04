@@ -1129,12 +1129,358 @@ function initParticles() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// VOICE ASSISTANT (SPEECH-TO-TEXT & TEXT-TO-SPEECH)
+// ══════════════════════════════════════════════════════════════════
+const VoiceAssistant = {
+  recognition: null,
+  isRecording: false,
+  synth: window.speechSynthesis,
+  activeUtterance: null,
+  activeTtsBtn: null,
+
+  initSTT() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      if (D.micBtn) {
+        D.micBtn.title = 'Speech recognition not supported in this browser';
+        D.micBtn.addEventListener('click', () => toast('🎙️ Voice input requires Chrome or Edge browser.'));
+      }
+      return;
+    }
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = false;
+    this.recognition.interimResults = true;
+
+    this.recognition.onstart = () => {
+      this.isRecording = true;
+      if (D.micBtn) {
+        D.micBtn.classList.add('recording');
+        D.micBtn.title = 'Listening... Click to stop';
+      }
+      toast(state.language === 'en' ? '🎙️ Listening... Speak now' : '🎙️ सुन रहा हूँ... बोलिए');
+    };
+
+    this.recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      if (D.chatInput) {
+        D.chatInput.value = transcript;
+        autoResize();
+        D.sendBtn.disabled = false;
+      }
+    };
+
+    this.recognition.onerror = (e) => {
+      this.stopSTT();
+      toast(`🎙️ Voice error: ${e.error}`);
+    };
+
+    this.recognition.onend = () => {
+      this.stopSTT();
+    };
+
+    if (D.micBtn) {
+      D.micBtn.title = 'Voice input (Click to speak)';
+      D.micBtn.addEventListener('click', () => {
+        if (this.isRecording) {
+          this.stopSTT();
+        } else {
+          this.startSTT();
+        }
+      });
+    }
+  },
+
+  startSTT() {
+    if (!this.recognition) return;
+    this.recognition.lang = state.language === 'en' ? 'en-IN' : 'hi-IN';
+    try {
+      this.recognition.start();
+    } catch (e) {
+      this.stopSTT();
+    }
+  },
+
+  stopSTT() {
+    this.isRecording = false;
+    if (D.micBtn) {
+      D.micBtn.classList.remove('recording');
+      D.micBtn.title = 'Voice input (Click to speak)';
+    }
+    if (this.recognition) {
+      try { this.recognition.stop(); } catch (e) {}
+    }
+  },
+
+  // Text-To-Speech (TTS Audio Read-Aloud)
+  speak(text, btn) {
+    if (!this.synth) {
+      toast('🔊 Speech Synthesis not supported in this browser.');
+      return;
+    }
+
+    if (this.synth.speaking) {
+      this.synth.cancel();
+      if (this.activeTtsBtn) {
+        this.activeTtsBtn.classList.remove('playing');
+        this.activeTtsBtn.innerHTML = '🔊 Listen';
+      }
+      if (this.activeTtsBtn === btn) {
+        this.activeTtsBtn = null;
+        return; // user clicked to stop playback
+      }
+    }
+
+    // Clean markdown text for TTS
+    const cleanText = text
+      .replace(/<[^>]*>/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/###/g, '')
+      .replace(/`/g, '')
+      .replace(/📍|📞|🚇|💰|🏗️|📋|⚖️|🙏|🟢|🔴|⚡/g, '');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = state.language === 'en' ? 'en-IN' : 'hi-IN';
+    utterance.rate = 0.95;
+
+    // Try to find native Hindi or English voice
+    const voices = this.synth.getVoices();
+    const targetLang = state.language === 'en' ? 'en' : 'hi';
+    const matchVoice = voices.find(v => v.lang.toLowerCase().includes(targetLang));
+    if (matchVoice) utterance.voice = matchVoice;
+
+    utterance.onstart = () => {
+      this.activeTtsBtn = btn;
+      if (btn) {
+        btn.classList.add('playing');
+        btn.innerHTML = '⏹ Stop';
+      }
+    };
+
+    utterance.onend = utterance.onerror = () => {
+      if (btn) {
+        btn.classList.remove('playing');
+        btn.innerHTML = '🔊 Listen';
+      }
+      this.activeTtsBtn = null;
+    };
+
+    this.activeUtterance = utterance;
+    this.synth.speak(utterance);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// WAGE & OVERTIME CALCULATOR ENGINE
+// ══════════════════════════════════════════════════════════════════
+const WageCalculator = {
+  _lastCalc: null,
+
+  init() {
+    const skillEl = document.getElementById('calc-skill');
+    const actualEl = document.getElementById('calc-actual-wage');
+    const hoursEl = document.getElementById('calc-hours');
+    const daysEl = document.getElementById('calc-days');
+    const migrantEl = document.getElementById('calc-migrant');
+
+    [skillEl, actualEl, hoursEl, daysEl, migrantEl].forEach(el => {
+      el?.addEventListener('change', () => this.calculate());
+      el?.addEventListener('input', () => this.calculate());
+    });
+
+    // Close buttons
+    D.calcClose?.addEventListener('click', () => this.close());
+    D.calcBackdrop?.addEventListener('click', () => this.close());
+    D.btnOpenCalc?.addEventListener('click', () => this.open());
+
+    // Copy & Ask AI
+    document.getElementById('calc-copy-btn')?.addEventListener('click', () => this.copySummary());
+    document.getElementById('calc-ask-ai-btn')?.addEventListener('click', () => this.askAI());
+
+    this.calculate();
+  },
+
+  open() {
+    if (D.calcModal) D.calcModal.style.display = 'flex';
+    if (D.calcBackdrop) D.calcBackdrop.style.display = 'block';
+    this.calculate();
+  },
+
+  close() {
+    if (D.calcModal) D.calcModal.style.display = 'none';
+    if (D.calcBackdrop) D.calcBackdrop.style.display = 'none';
+  },
+
+  calculate() {
+    const skillCategory = document.getElementById('calc-skill')?.value ?? 'unskilled';
+    const minDailyWage  = LiveWages.getMin(skillCategory);
+
+    const actualWage    = parseFloat(document.getElementById('calc-actual-wage')?.value ?? '500') || 0;
+    const hoursPerDay   = parseFloat(document.getElementById('calc-hours')?.value ?? '10') || 8;
+    const daysWorked    = parseFloat(document.getElementById('calc-days')?.value ?? '26') || 1;
+    const isMigrant     = document.getElementById('calc-migrant')?.checked ?? true;
+
+    // Standard hours = 8/day
+    const normalHours = 8;
+    const overtimeHoursPerDay = Math.max(0, hoursPerDay - normalHours);
+    const totalOvertimeHours  = overtimeHoursPerDay * daysWorked;
+
+    // Minimum statutory hourly rate = minDailyWage / 8
+    const minHourlyRate = minDailyWage / 8;
+    // Statutory overtime rate = 2x statutory hourly rate (Section 59, Factories Act)
+    const overtimeHourlyRate = minHourlyRate * 2;
+    const totalOvertimePay = Math.round(totalOvertimeHours * overtimeHourlyRate);
+
+    // Wage shortfall per day
+    const wageShortfallPerDay = Math.max(0, minDailyWage - actualWage);
+    const totalBaseShortfall   = Math.round(wageShortfallPerDay * daysWorked);
+
+    // Inter-state migrant worker displacement allowance (50% of monthly minimum wage) under Sec 14 of 1979 Act
+    const monthlyMinWage = minDailyWage * 26;
+    const displacementAllowance = isMigrant ? Math.round(monthlyMinWage * 0.5) : 0;
+
+    const totalDues = totalBaseShortfall + totalOvertimePay + displacementAllowance;
+
+    // Render output
+    const totalEl = document.getElementById('calc-total-dues');
+    if (totalEl) totalEl.textContent = `₹${totalDues.toLocaleString('en-IN')}`;
+
+    const breakdownEl = document.getElementById('calc-breakdown');
+    if (breakdownEl) {
+      breakdownEl.innerHTML = `
+        <div class="calc-breakdown-item">
+          <span>Statutory Minimum Wage Rate:</span>
+          <strong>₹${minDailyWage}/day (₹${minHourlyRate.toFixed(1)}/hr)</strong>
+        </div>
+        <div class="calc-breakdown-item">
+          <span>Actual Wage Shortfall (${daysWorked} days @ ₹${wageShortfallPerDay}/day short):</span>
+          <strong style="color:var(--red)">₹${totalBaseShortfall.toLocaleString('en-IN')}</strong>
+        </div>
+        <div class="calc-breakdown-item">
+          <span>Overtime Dues (${totalOvertimeHours} hrs total @ 2x rate = ₹${overtimeHourlyRate.toFixed(1)}/hr):</span>
+          <strong style="color:var(--yellow)">₹${totalOvertimePay.toLocaleString('en-IN')}</strong>
+        </div>
+        ${isMigrant ? `
+        <div class="calc-breakdown-item">
+          <span>Inter-State Displacement Allowance (Sec 14, 1979 Act):</span>
+          <strong style="color:var(--cyan)">₹${displacementAllowance.toLocaleString('en-IN')}</strong>
+        </div>
+        ` : ''}
+      `;
+    }
+
+    this._lastCalc = {
+      skillCategory,
+      minDailyWage,
+      actualWage,
+      hoursPerDay,
+      daysWorked,
+      isMigrant,
+      totalBaseShortfall,
+      totalOvertimePay,
+      displacementAllowance,
+      totalDues,
+    };
+  },
+
+  copySummary() {
+    if (!this._lastCalc) return;
+    const c = this._lastCalc;
+    const text = `📋 SHRAYAK STATUTORY WAGE & OVERTIME CLAIM SUMMARY
+------------------------------------------------
+Worker Skill Category: ${c.skillCategory.toUpperCase()}
+Statutory Minimum Wage: ₹${c.minDailyWage}/day
+Actual Wage Paid: ₹${c.actualWage}/day
+Days Worked: ${c.daysWorked} days (${c.hoursPerDay} hrs/day)
+
+LEGAL DUES BREAKDOWN:
+1. Wage Underpayment Shortfall: ₹${c.totalBaseShortfall} (Sec 3 & 20, Minimum Wages Act 1948)
+2. Overtime Pay (2x Rate for ${c.hoursPerDay > 8 ? c.hoursPerDay - 8 : 0} hrs/day): ₹${c.totalOvertimePay} (Sec 59, Factories Act 1948)
+${c.isMigrant ? `3. Inter-State Displacement Allowance: ₹${c.displacementAllowance} (Sec 14, Migrant Workmen Act 1979)\n` : ''}
+TOTAL STATUTORY CLAIM OWED: ₹${c.totalDues}
+------------------------------------------------
+Delhi Labour Dept Helpline: 1800-11-2345`;
+
+    navigator.clipboard.writeText(text).then(() => toast('📋 Claim summary copied to clipboard!'));
+  },
+
+  askAI() {
+    if (!this._lastCalc) return;
+    const c = this._lastCalc;
+    this.close();
+
+    const isEn = state.language === 'en';
+    const query = isEn
+      ? `I worked for ${c.daysWorked} days at ${c.hoursPerDay} hours per day as a ${c.skillCategory} worker. My contractor paid me only ₹${c.actualWage}/day instead of statutory ₹${c.minDailyWage}/day. My total unpaid dues are ₹${c.totalDues}. Please guide me on filing a legal claim under Minimum Wages Act, 1948.`
+      : `मैंने ${c.skillCategory} श्रेणी में ${c.daysWorked} दिन तक प्रति दिन ${c.hoursPerDay} घंटे काम किया। मेरे ठेकेदार ने न्यूनतम ₹${c.minDailyWage} के स्थान पर केवल ₹${c.actualWage} दिया। मेरी कुल बकाया राशि ₹${c.totalDues} है। न्यूनतम वेतन अधिनियम, 1948 के तहत शिकायत कैसे दर्ज करें?`;
+
+    D.chatInput.value = query;
+    autoResize();
+    sendMsg(query);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// EMERGENCY HELPLINES MODAL & DISTRICT CHIPS
+// ══════════════════════════════════════════════════════════════════
+function setupHelplinesAndDistrictChips() {
+  // Open / Close Helpline Modal
+  D.btnOpenHelplines?.addEventListener('click', () => {
+    if (D.helplineModal) D.helplineModal.style.display = 'flex';
+    if (D.helplineBackdrop) D.helplineBackdrop.style.display = 'block';
+  });
+
+  const closeHelpline = () => {
+    if (D.helplineModal) D.helplineModal.style.display = 'none';
+    if (D.helplineBackdrop) D.helplineBackdrop.style.display = 'none';
+  };
+
+  D.helplineClose?.addEventListener('click', closeHelpline);
+  D.helplineBackdrop?.addEventListener('click', closeHelpline);
+
+  // Copy buttons inside helpline modal
+  document.querySelectorAll('.hl-copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const num = btn.dataset.copy;
+      if (num) {
+        navigator.clipboard.writeText(num).then(() => {
+          btn.textContent = '✓ Copied';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+          toast(`📞 Helpline number ${num} copied!`);
+        });
+      }
+    });
+  });
+
+  // District Chips under Geo Finder
+  document.querySelectorAll('.geo-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.geo-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const pin = chip.dataset.pin;
+      if (pin && D.pinInput) {
+        D.pinInput.value = pin;
+        Geo.searchByPin(pin);
+      }
+    });
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════════════════
 async function boot() {
   resolveDOM();
   setupInput();
   initParticles();
+
+  // Voice & Tools Setup
+  VoiceAssistant.initSTT();
+  WageCalculator.init();
+  setupHelplinesAndDistrictChips();
 
   // LiveWages must init first — WorkerRegistry.render() uses its rates
   await LiveWages.init();
