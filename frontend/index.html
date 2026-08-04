@@ -148,6 +148,13 @@
             </svg>
           </button>
         </div>
+        <div class="geo-district-chips" id="geo-district-chips">
+          <button class="geo-chip" data-pin="110085">Rohini (NW)</button>
+          <button class="geo-chip" data-pin="110020">Okhla (S)</button>
+          <button class="geo-chip" data-pin="110032">Shahdara (E)</button>
+          <button class="geo-chip" data-pin="110015">Kirti Nagar (W)</button>
+          <button class="geo-chip" data-pin="110001">Connaught (C)</button>
+        </div>
         <div id="geo-result" class="geo-result">
           <div class="geo-empty">
             <div class="geo-empty-icon">📍</div>
@@ -245,6 +252,16 @@
       </div>
 
       <div class="topbar-right">
+        <div class="topbar-actions">
+          <button class="tb-tool-btn" id="btn-open-calc" title="Wage & Overtime Calculator">
+            <span>🧮</span>
+            <span class="tb-tool-label">Wage Calc</span>
+          </button>
+          <button class="tb-tool-btn" id="btn-open-helplines" title="Emergency Helplines">
+            <span>🚨</span>
+            <span class="tb-tool-label">Helplines</span>
+          </button>
+        </div>
         <div class="lang-selector">
           <button class="lang-btn active" id="lang-hi-btn" title="हिन्दी में बातचीत करें">हिन्दी</button>
           <button class="lang-btn" id="lang-en-btn" title="Chat in English">English</button>
@@ -381,6 +398,137 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════════ WAGE & OVERTIME CALCULATOR MODAL ═══════════════ -->
+<div class="modal-backdrop" id="calc-modal-backdrop" style="display:none"></div>
+<div class="modal-card" id="wage-calc-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="calc-modal-title">
+  <div class="modal-header">
+    <div class="modal-header-title" id="calc-modal-title">
+      <span>🧮</span> statutory Wage &amp; Overtime Dues Calculator
+    </div>
+    <button class="modal-close-btn" id="calc-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="modal-sub">Based on Delhi Govt Minimum Wage Notifications (Oct 2024 / 2026) &amp; Section 59, Factories Act (2x Overtime Rate)</div>
+  <div class="modal-body">
+    <div class="calc-grid">
+      <div class="calc-field">
+        <label for="calc-skill">Skill Category (श्रेणी)</label>
+        <select id="calc-skill" class="calc-input">
+          <option value="unskilled" selected>Unskilled (अकुशल) — ₹743/day</option>
+          <option value="semi-skilled">Semi-Skilled (अर्ध-कुशल) — ₹817/day</option>
+          <option value="skilled">Skilled (कुशल) — ₹899/day</option>
+          <option value="highly-skilled">Highly Skilled (उच्च कुशल) — ₹988/day</option>
+        </select>
+      </div>
+
+      <div class="calc-field">
+        <label for="calc-actual-wage">Actual Daily Wage Received (प्राप्त दैनिक वेतन)</label>
+        <div class="calc-input-wrap">
+          <span>₹</span>
+          <input type="number" id="calc-actual-wage" class="calc-input" placeholder="e.g. 500" value="500" min="0" />
+        </div>
+      </div>
+
+      <div class="calc-field">
+        <label for="calc-hours">Daily Hours Worked (दैनिक कार्य घंटे)</label>
+        <input type="number" id="calc-hours" class="calc-input" placeholder="Standard is 8 hrs" value="10" min="1" max="24" />
+      </div>
+
+      <div class="calc-field">
+        <label for="calc-days">Days Worked (कुल कार्य दिवस)</label>
+        <input type="number" id="calc-days" class="calc-input" placeholder="e.g. 26 days" value="26" min="1" max="365" />
+      </div>
+
+      <div class="calc-field calc-field--full">
+        <label class="calc-checkbox-label">
+          <input type="checkbox" id="calc-migrant" checked />
+          <span>Inter-State Migrant Worker (अन्य राज्य का प्रवासी मजदूर — Claim Displacement Allowance &amp; Return Fare under 1979 Act)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Output result card -->
+    <div class="calc-result-box" id="calc-result-box">
+      <div class="calc-result-header">
+        <span>💰 Total Legal Claim Dues Owed:</span>
+        <span class="calc-dues-total" id="calc-total-dues">₹0</span>
+      </div>
+      <div class="calc-breakdown" id="calc-breakdown">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-ghost" id="calc-copy-btn">📋 Copy Claim Summary</button>
+    <button class="btn-primary" id="calc-ask-ai-btn">🤖 Ask Shrayak AI to Draft Legal Notice</button>
+  </div>
+</div>
+
+<!-- ═══════════════ EMERGENCY HELPLINES MODAL ═══════════════ -->
+<div class="modal-backdrop" id="helpline-modal-backdrop" style="display:none"></div>
+<div class="modal-card" id="helpline-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="helpline-modal-title">
+  <div class="modal-header">
+    <div class="modal-header-title" id="helpline-modal-title">
+      <span>🚨</span> Delhi Labour Rights Emergency Helplines
+    </div>
+    <button class="modal-close-btn" id="helpline-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="modal-sub">Free 24/7 Government Toll-Free Lines &amp; Free Legal Aid</div>
+  <div class="modal-body">
+    <div class="helplines-grid">
+      <div class="helpline-card">
+        <div class="hl-icon">📞</div>
+        <div class="hl-info">
+          <div class="hl-name">Delhi Labour Dept Toll-Free Helpline</div>
+          <div class="hl-sub">दिल्ली श्रम विभाग टोल-फ्री हेल्पलाइन (Minimum wage &amp; wage disputes)</div>
+          <a href="tel:1800112345" class="hl-num">1800-11-2345</a>
+        </div>
+        <button class="hl-copy-btn" data-copy="1800112345">Copy</button>
+      </div>
+
+      <div class="helpline-card">
+        <div class="hl-icon">📜</div>
+        <div class="hl-info">
+          <div class="hl-name">e-Shram National Portal Helpline</div>
+          <div class="hl-sub">ई-श्रम राष्ट्रीय पोर्टल सहायता (UAN Registration &amp; Insurances)</div>
+          <a href="tel:14434" class="hl-num">14434</a>
+        </div>
+        <button class="hl-copy-btn" data-copy="14434">Copy</button>
+      </div>
+
+      <div class="helpline-card">
+        <div class="hl-icon">⚖️</div>
+        <div class="hl-info">
+          <div class="hl-name">NALSA Free Legal Services Authority</div>
+          <div class="hl-sub">राष्ट्रीय विधिक सेवा प्राधिकरण (Free Lawyer for Labour Court)</div>
+          <a href="tel:15100" class="hl-num">15100</a>
+        </div>
+        <button class="hl-copy-btn" data-copy="15100">Copy</button>
+      </div>
+
+      <div class="helpline-card">
+        <div class="hl-icon">👩</div>
+        <div class="hl-info">
+          <div class="hl-name">Women Worker Safety Helpline</div>
+          <div class="hl-sub">महिला श्रमिक सुरक्षा हेल्पलाइन (Equal remuneration &amp; safety)</div>
+          <a href="tel:1091" class="hl-num">1091</a>
+        </div>
+        <button class="hl-copy-btn" data-copy="1091">Copy</button>
+      </div>
+
+      <div class="helpline-card">
+        <div class="hl-icon">🧒</div>
+        <div class="hl-info">
+          <div class="hl-name">Child Labour Elimination Helpline</div>
+          <div class="hl-sub">बाल श्रम उन्मूलन (Childline National Helpline)</div>
+          <a href="tel:1098" class="hl-num">1098</a>
+        </div>
+        <button class="hl-copy-btn" data-copy="1098">Copy</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>
