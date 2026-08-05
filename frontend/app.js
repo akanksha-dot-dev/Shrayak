@@ -70,13 +70,31 @@ function resolveDOM() {
     sbCollapseBtn: g('sb-collapse-btn'),
     // Tool buttons & Modals
     btnOpenCalc:      g('btn-open-calc'),
+    btnOpenNotice:    g('btn-open-notice'),
     btnOpenHelplines: g('btn-open-helplines'),
     calcModal:        g('wage-calc-modal'),
     calcBackdrop:     g('calc-modal-backdrop'),
     calcClose:        g('calc-modal-close'),
+    calcGenNoticeBtn: g('calc-gen-notice-btn'),
     helplineModal:    g('helpline-modal'),
     helplineBackdrop: g('helpline-modal-backdrop'),
     helplineClose:    g('helpline-modal-close'),
+    whatsappSosBtn:   g('whatsapp-sos-btn'),
+    // Notice Modal
+    noticeModal:      g('legal-notice-modal'),
+    noticeBackdrop:   g('notice-modal-backdrop'),
+    noticeClose:      g('notice-modal-close'),
+    noticePaper:      g('notice-paper-content'),
+    noticeLangHi:     g('notice-lang-hi'),
+    noticeLangEn:     g('notice-lang-en'),
+    noticeCopyBtn:    g('notice-copy-btn'),
+    noticePrintBtn:   g('notice-print-btn'),
+    noticeAskAiBtn:   g('notice-ask-ai-btn'),
+    // Voice Dictation Overlay
+    voiceOverlay:     g('voice-overlay'),
+    voiceTitle:       g('voice-title'),
+    voiceTranscript:  g('voice-transcript'),
+    voiceCancelBtn:   g('voice-cancel-btn'),
   };
 }
 
