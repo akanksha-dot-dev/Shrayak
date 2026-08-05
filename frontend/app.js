@@ -1184,7 +1184,8 @@ const VoiceAssistant = {
       for (let i = e.resultIndex; i < e.results.length; i++) {
         transcript += e.results[i][0].transcript;
       }
-      if (D.chatInput) {
+      if (D.voiceTranscript) D.voiceTranscript.textContent = transcript || 'बोलिए...';
+      if (D.chatInput && transcript) {
         D.chatInput.value = transcript;
         autoResize();
         D.sendBtn.disabled = false;
@@ -1210,11 +1211,17 @@ const VoiceAssistant = {
         }
       });
     }
+
+    D.voiceCancelBtn?.addEventListener('click', () => this.stopSTT());
   },
 
   startSTT() {
     if (!this.recognition) return;
+    this.isRecording = true;
     this.recognition.lang = state.language === 'en' ? 'en-IN' : 'hi-IN';
+    if (D.voiceOverlay) D.voiceOverlay.style.display = 'flex';
+    if (D.voiceTitle) D.voiceTitle.textContent = state.language === 'en' ? '🎙️ Listening... (Say your query)' : '🎙️ सुन रहे हैं... (अपना सवाल बोलें)';
+    if (D.voiceTranscript) D.voiceTranscript.textContent = state.language === 'en' ? 'Listening...' : 'बोलिए...';
     try {
       this.recognition.start();
     } catch (e) {
@@ -1224,6 +1231,7 @@ const VoiceAssistant = {
 
   stopSTT() {
     this.isRecording = false;
+    if (D.voiceOverlay) D.voiceOverlay.style.display = 'none';
     if (D.micBtn) {
       D.micBtn.classList.remove('recording');
       D.micBtn.title = 'Voice input (Click to speak)';
@@ -1292,6 +1300,198 @@ const VoiceAssistant = {
 };
 
 // ══════════════════════════════════════════════════════════════════
+// LEGAL NOTICE GENERATOR ENGINE
+// ══════════════════════════════════════════════════════════════════
+const LegalNoticeManager = {
+  lang: 'hi',
+  _lastText: '',
+
+  init() {
+    D.btnOpenNotice?.addEventListener('click', () => this.open());
+    D.noticeClose?.addEventListener('click', () => this.close());
+    D.noticeBackdrop?.addEventListener('click', () => this.close());
+
+    D.noticeLangHi?.addEventListener('click', () => {
+      this.lang = 'hi';
+      D.noticeLangHi.classList.add('active');
+      D.noticeLangEn.classList.remove('active');
+      this.render();
+    });
+
+    D.noticeLangEn?.addEventListener('click', () => {
+      this.lang = 'en';
+      D.noticeLangEn.classList.add('active');
+      D.noticeLangHi.classList.remove('active');
+      this.render();
+    });
+
+    const fields = [
+      'notice-worker-name', 'notice-employer-name', 'notice-site-loc',
+      'notice-skill', 'notice-actual-rate', 'notice-days',
+      'notice-overtime-hrs', 'notice-claim-type'
+    ];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      el?.addEventListener('input', () => this.render());
+      el?.addEventListener('change', () => this.render());
+    });
+
+    D.noticeCopyBtn?.addEventListener('click', () => this.copyNotice());
+    D.noticePrintBtn?.addEventListener('click', () => this.printNotice());
+    D.noticeAskAiBtn?.addEventListener('click', () => this.askAI());
+  },
+
+  open(prefill = {}) {
+    if (prefill.workerName) document.getElementById('notice-worker-name').value = prefill.workerName;
+    if (prefill.employerName) document.getElementById('notice-employer-name').value = prefill.employerName;
+    if (prefill.skillCategory) document.getElementById('notice-skill').value = prefill.skillCategory;
+    if (prefill.actualWage) document.getElementById('notice-actual-rate').value = prefill.actualWage;
+    if (prefill.daysWorked) document.getElementById('notice-days').value = prefill.daysWorked;
+    if (prefill.overtimeHrs) document.getElementById('notice-overtime-hrs').value = prefill.overtimeHrs;
+
+    if (D.noticeModal) D.noticeModal.style.display = 'flex';
+    if (D.noticeBackdrop) D.noticeBackdrop.style.display = 'block';
+    this.render();
+  },
+
+  close() {
+    if (D.noticeModal) D.noticeModal.style.display = 'none';
+    if (D.noticeBackdrop) D.noticeBackdrop.style.display = 'none';
+  },
+
+  render() {
+    const workerName = document.getElementById('notice-worker-name')?.value || 'Ram Kumar';
+    const employerName = document.getElementById('notice-employer-name')?.value || 'Apex Builders Pvt Ltd';
+    const siteLoc = document.getElementById('notice-site-loc')?.value || 'Rohini Sector-6, Delhi';
+    const skillCategory = document.getElementById('notice-skill')?.value || 'unskilled';
+    const actualRate = parseFloat(document.getElementById('notice-actual-rate')?.value || '450');
+    const daysWorked = parseFloat(document.getElementById('notice-days')?.value || '90');
+    const overtimeHrs = parseFloat(document.getElementById('notice-overtime-hrs')?.value || '50');
+    const claimType = document.getElementById('notice-claim-type')?.value || 'wage_and_overtime';
+
+    const minDailyRate = LiveWages.getMin(skillCategory);
+    const minHourlyRate = minDailyRate / 8;
+    const otHourlyRate = minHourlyRate * 2;
+
+    const wageShortfall = Math.max(0, minDailyRate - actualRate) * daysWorked;
+    const otDues = Math.round(overtimeHrs * otHourlyRate);
+    const migrantAllowance = claimType.includes('migrant') || claimType === 'full_combined' ? Math.round(minDailyRate * 26 * 0.5) : 0;
+    const grapComp = claimType.includes('grap') || claimType === 'full_combined' ? Math.round(minDailyRate * 7) : 0;
+
+    const totalClaim = wageShortfall + otDues + migrantAllowance + grapComp;
+
+    const isHi = this.lang === 'hi';
+    const dateStr = new Date().toLocaleDateString(isHi ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let text = '';
+
+    if (isHi) {
+      text = `वैधानिक मांग सूचना पत्र (STATUTORY DEMAND NOTICE)
+दिनांक: ${dateStr}
+
+प्रेषक: ${workerName} (श्रमिक/पीडित पक्ष)
+स्थान/पता: ${siteLoc}
+
+सेवा में,
+${employerName} (ठेकेदार/नियोक्ता)
+कार्यस्थल: ${siteLoc}
+
+विषय: न्यूनतम वेतन अधिनियम, 1948 की धारा 20 एवं अंतर-राज्यीय प्रवासी कर्मकार अधिनियम, 1979 के अंतर्गत बकाया वेतन व भत्तों के भुगतान हेतु विधिक नोटिस।
+
+महोदय,
+
+1. प्रार्थी (${workerName}) आपके अधीन ${siteLoc} पर '${skillCategory.toUpperCase()}' श्रेणी के श्रमिक के रूप में कुल ${daysWorked} दिवस कार्यरत रहा है।
+
+2. दिल्ली सरकार की आधिकारिक अधिसूचना के अनुसार न्यूनतम वेतन दर ₹${minDailyRate}/प्रतिदिन निर्धारित है। किंतु आपने प्रार्थी को केवल ₹${actualRate}/प्रतिदिन का भुगतान किया है।
+
+3. बकाया राशि का वैधानिक विवरण निम्नलिखित है:
+   • न्यूनतम वेतन अंतर राशि (${daysWorked} दिन @ ₹${Math.max(0, minDailyRate - actualRate)}/दिन): ₹${wageShortfall.toLocaleString('en-IN')}
+   • ओवरटाइम बकाया (${overtimeHrs} घंटे @ 2x दर ₹${otHourlyRate.toFixed(1)}/घंटा): ₹${otDues.toLocaleString('en-IN')}
+   ${migrantAllowance ? `• प्रवासी मजदूर विस्थापन भत्ता (धारा 14, 1979 अधिनियम): ₹${migrantAllowance.toLocaleString('en-IN')}\n` : ''}${grapComp ? `• GRAP कार्य स्थगन वैधानिक मुआवजा (7 दिन): ₹${grapComp.toLocaleString('en-IN')}\n` : ''}   --------------------------------------------------------
+   कुल देय वैधानिक दावा राशि: ₹${totalClaim.toLocaleString('en-IN')}
+
+4. अतः इस कानूनी नोटिस के माध्यम से आपको निर्देशित किया जाता है कि नोटिस प्राप्ति के 7 (सात) दिनों के भीतर उक्त राशि ₹${totalClaim.toLocaleString('en-IN')} प्रार्थी को भुगतान करें, अन्यथा प्रार्थी क्षेत्रीय श्रम आयुक्त (Labour Commissioner, Delhi) एवं श्रम न्यायालय में धारा 20 के तहत वाद दायर करने हेतु स्वतंत्र होगा।
+
+भवदीय,
+${workerName}
+(संपर्क/हस्ताक्षर)`;
+    } else {
+      text = `FORMAL STATUTORY DEMAND NOTICE
+Date: ${dateStr}
+
+FROM: ${workerName} (Claimant / Worker)
+Address/Site: ${siteLoc}
+
+TO:
+${employerName} (Employer / Contractor)
+Work Site Location: ${siteLoc}
+
+SUBJECT: STATUTORY DEMAND NOTICE FOR UNPAID WAGES & OVERTIME UNDER SECTION 20, MINIMUM WAGES ACT, 1948 & INTER-STATE MIGRANT WORKMEN ACT, 1979.
+
+Sir / Madam,
+
+1. The Claimant (${workerName}) was employed by you as a '${skillCategory.toUpperCase()}' worker at ${siteLoc} for a total period of ${daysWorked} days.
+
+2. As per official Delhi Government Notifications, the statutory minimum wage rate is ₹${minDailyRate}/day. However, you illegally underpaid the Claimant at ₹${actualRate}/day.
+
+3. STATUTORY CLAIM BREAKDOWN:
+   • Base Wage Shortfall (${daysWorked} days @ ₹${Math.max(0, minDailyRate - actualRate)}/day short): ₹${wageShortfall.toLocaleString('en-IN')}
+   • Overtime Dues (${overtimeHrs} hrs @ 2x rate = ₹${otHourlyRate.toFixed(1)}/hr): ₹${otDues.toLocaleString('en-IN')}
+   ${migrantAllowance ? `• Inter-State Displacement Allowance (Sec 14, 1979 Act): ₹${migrantAllowance.toLocaleString('en-IN')}\n` : ''}${grapComp ? `• GRAP IV Work Halt Compensation (7 days): ₹${grapComp.toLocaleString('en-IN')}\n` : ''}   --------------------------------------------------------
+   TOTAL STATUTORY DUES OWED: ₹${totalClaim.toLocaleString('en-IN')}
+
+4. You are hereby called upon to remit the total statutory dues of ₹${totalClaim.toLocaleString('en-IN')} within 7 (seven) days of receipt of this notice. Failing this, formal legal proceedings under Section 20 of the Minimum Wages Act 1948 will be initiated before the Labour Commissioner, Delhi.
+
+Yours faithfully,
+${workerName}
+(Signature / Contact)`;
+    }
+
+    if (D.noticePaper) D.noticePaper.textContent = text;
+    this._lastText = text;
+  },
+
+  copyNotice() {
+    if (!this._lastText) return;
+    navigator.clipboard.writeText(this._lastText).then(() => toast('📋 Legal Notice text copied to clipboard!'));
+  },
+
+  printNotice() {
+    if (!this._lastText) return;
+    const w = window.open('', '_blank', 'width=700,height=800');
+    w.document.write(`
+      <html>
+        <head>
+          <title>Statutory Legal Notice — Shrayak</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; line-height: 1.8; color: #111; }
+            pre { font-family: inherit; white-space: pre-wrap; font-size: 14px; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <pre>${this._lastText}</pre>
+          <script>window.onload = function() { window.print(); };</script>
+        </body>
+      </html>
+    `);
+    w.document.close();
+  },
+
+  askAI() {
+    if (!this._lastText) return;
+    this.close();
+    const q = this.lang === 'hi'
+      ? `कृपया मेरे इस कानूनी नोटिस की समीक्षा करें और बताएं कि दिल्ली श्रम कार्यालय में धारा 20 का दावा दायर करने की प्रक्रिया क्या है:\n\n${this._lastText}`
+      : `Please review this statutory notice and explain the procedure to file a Section 20 claim in Delhi:\n\n${this._lastText}`;
+
+    D.chatInput.value = q;
+    autoResize();
+    sendMsg(q);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
 // WAGE & OVERTIME CALCULATOR ENGINE
 // ══════════════════════════════════════════════════════════════════
 const WageCalculator = {
@@ -1309,14 +1509,26 @@ const WageCalculator = {
       el?.addEventListener('input', () => this.calculate());
     });
 
-    // Close buttons
     D.calcClose?.addEventListener('click', () => this.close());
     D.calcBackdrop?.addEventListener('click', () => this.close());
     D.btnOpenCalc?.addEventListener('click', () => this.open());
 
-    // Copy & Ask AI
     document.getElementById('calc-copy-btn')?.addEventListener('click', () => this.copySummary());
     document.getElementById('calc-ask-ai-btn')?.addEventListener('click', () => this.askAI());
+
+    D.calcGenNoticeBtn?.addEventListener('click', () => {
+      this.close();
+      if (this._lastCalc) {
+        LegalNoticeManager.open({
+          skillCategory: this._lastCalc.skillCategory,
+          actualWage: this._lastCalc.actualWage,
+          daysWorked: this._lastCalc.daysWorked,
+          overtimeHrs: Math.max(0, this._lastCalc.hoursPerDay - 8) * this._lastCalc.daysWorked,
+        });
+      } else {
+        LegalNoticeManager.open();
+      }
+    });
 
     this.calculate();
   },
@@ -1341,33 +1553,30 @@ const WageCalculator = {
     const daysWorked    = parseFloat(document.getElementById('calc-days')?.value ?? '26') || 1;
     const isMigrant     = document.getElementById('calc-migrant')?.checked ?? true;
 
-    // Standard hours = 8/day
     const normalHours = 8;
     const overtimeHoursPerDay = Math.max(0, hoursPerDay - normalHours);
     const totalOvertimeHours  = overtimeHoursPerDay * daysWorked;
 
-    // Minimum statutory hourly rate = minDailyWage / 8
     const minHourlyRate = minDailyWage / 8;
-    // Statutory overtime rate = 2x statutory hourly rate (Section 59, Factories Act)
     const overtimeHourlyRate = minHourlyRate * 2;
     const totalOvertimePay = Math.round(totalOvertimeHours * overtimeHourlyRate);
 
-    // Wage shortfall per day
     const wageShortfallPerDay = Math.max(0, minDailyWage - actualWage);
     const totalBaseShortfall   = Math.round(wageShortfallPerDay * daysWorked);
 
-    // Inter-state migrant worker displacement allowance (50% of monthly minimum wage) under Sec 14 of 1979 Act
     const monthlyMinWage = minDailyWage * 26;
     const displacementAllowance = isMigrant ? Math.round(monthlyMinWage * 0.5) : 0;
 
     const totalDues = totalBaseShortfall + totalOvertimePay + displacementAllowance;
 
-    // Render output
     const totalEl = document.getElementById('calc-total-dues');
     if (totalEl) totalEl.textContent = `₹${totalDues.toLocaleString('en-IN')}`;
 
     const breakdownEl = document.getElementById('calc-breakdown');
     if (breakdownEl) {
+      const legalPct = 100;
+      const actualPct = Math.min(100, Math.round((actualWage / minDailyWage) * 100));
+
       breakdownEl.innerHTML = `
         <div class="calc-breakdown-item">
           <span>Statutory Minimum Wage Rate:</span>
@@ -1387,6 +1596,24 @@ const WageCalculator = {
           <strong style="color:var(--cyan)">₹${displacementAllowance.toLocaleString('en-IN')}</strong>
         </div>
         ` : ''}
+
+        <div class="wage-compare-bar-wrap">
+          <div class="wage-compare-title">📊 Wage Comparison Visualizer</div>
+          <div class="wage-bar-row">
+            <span class="wage-bar-label">Statutory:</span>
+            <div class="wage-bar-track">
+              <div class="wage-bar-fill wage-bar-fill--legal" style="width:${legalPct}%"></div>
+            </div>
+            <span class="wage-bar-val" style="color:var(--green)">₹${minDailyWage}</span>
+          </div>
+          <div class="wage-bar-row">
+            <span class="wage-bar-label">Actual Paid:</span>
+            <div class="wage-bar-track">
+              <div class="wage-bar-fill wage-bar-fill--actual" style="width:${actualPct}%"></div>
+            </div>
+            <span class="wage-bar-val" style="color:var(--red)">₹${actualWage}</span>
+          </div>
+        </div>
       `;
     }
 
