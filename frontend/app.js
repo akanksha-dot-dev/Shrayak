@@ -1669,7 +1669,7 @@ Delhi Labour Dept Helpline: 1800-11-2345`;
 };
 
 // ══════════════════════════════════════════════════════════════════
-// EMERGENCY HELPLINES MODAL & DISTRICT CHIPS
+// EMERGENCY HELPLINES MODAL, WHATSAPP SOS & TOPIC CHIPS
 // ══════════════════════════════════════════════════════════════════
 function setupHelplinesAndDistrictChips() {
   // Open / Close Helpline Modal
@@ -1685,6 +1685,16 @@ function setupHelplinesAndDistrictChips() {
 
   D.helplineClose?.addEventListener('click', closeHelpline);
   D.helplineBackdrop?.addEventListener('click', closeHelpline);
+
+  // WhatsApp Distress SOS button
+  D.whatsappSosBtn?.addEventListener('click', () => {
+    const p = state.persona;
+    const workerName = p ? p.name : 'Worker';
+    const occupation = p ? p.occupation : 'Construction Worker';
+    const text = `🚨 *SHRAYAK LABOUR EMERGENCY DISTRESS SOS* 🚨\n\nWorker Name: ${workerName}\nOccupation: ${occupation}\nIssue: Contractor wage dispute / illegal underpayment\nLocation: Delhi NCR\nHelpline Needed: Legal advice under Minimum Wages Act, 1948 & e-Shram Assistance.\n\nSent via Shrayak Labour Rights AI Assistant (Delhi)`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  });
 
   // Copy buttons inside helpline modal
   document.querySelectorAll('.hl-copy-btn').forEach(btn => {
@@ -1712,6 +1722,18 @@ function setupHelplinesAndDistrictChips() {
       }
     });
   });
+
+  // Quick Topic Chips bar above chat
+  document.querySelectorAll('.topic-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const q = chip.dataset.query;
+      if (q) {
+        D.chatInput.value = q;
+        autoResize();
+        sendMsg(q);
+      }
+    });
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1725,6 +1747,7 @@ async function boot() {
   // Voice & Tools Setup
   VoiceAssistant.initSTT();
   WageCalculator.init();
+  LegalNoticeManager.init();
   setupHelplinesAndDistrictChips();
 
   // LiveWages must init first — WorkerRegistry.render() uses its rates
