@@ -257,6 +257,10 @@
             <span>🧮</span>
             <span class="tb-tool-label">Wage Calc</span>
           </button>
+          <button class="tb-tool-btn" id="btn-open-notice" title="Generate Statutory Legal Notice">
+            <span>📜</span>
+            <span class="tb-tool-label">Legal Notice</span>
+          </button>
           <button class="tb-tool-btn" id="btn-open-helplines" title="Emergency Helplines">
             <span>🚨</span>
             <span class="tb-tool-label">Helplines</span>
@@ -301,6 +305,15 @@
           <span class="online-dot"></span>
           <span>Online</span>
         </div>
+      </div>
+
+      <!-- Quick Topic Chips -->
+      <div class="topic-chips" id="topic-chips">
+        <button class="topic-chip" data-query="दिल्ली में न्यूनतम वेतन दरें क्या हैं?">💰 न्यूनतम वेतन (Wage Rates)</button>
+        <button class="topic-chip" data-query="GRAP Stage IV लागू होने पर श्रमिक का क्या अधिकार है?">🏗️ GRAP प्रदूषण मुआवजा</button>
+        <button class="topic-chip" data-query="ठेकेदार ने वेतन रोक लिया है legal notice कैसे भेजें?">📜 वैधानिक कानूनी नोटिस</button>
+        <button class="topic-chip" data-query="e-Shram और BOCW रजिस्ट्रेशन कैसे करें?">📋 e-Shram & BOCW</button>
+        <button class="topic-chip" data-query="नजदीकी श्रम कार्यालय कहाँ है?">📍 नजदीकी श्रम कार्यालय</button>
       </div>
 
       <!-- Starter questions -->
@@ -461,7 +474,96 @@
 
   <div class="modal-footer">
     <button class="btn-ghost" id="calc-copy-btn">📋 Copy Claim Summary</button>
-    <button class="btn-primary" id="calc-ask-ai-btn">🤖 Ask Shrayak AI to Draft Legal Notice</button>
+    <button class="btn-primary" id="calc-gen-notice-btn">📜 Generate Formal Legal Notice</button>
+    <button class="btn-ghost" id="calc-ask-ai-btn">🤖 Ask Shrayak AI</button>
+  </div>
+</div>
+
+<!-- ═══════════════ LEGAL NOTICE GENERATOR MODAL ═══════════════ -->
+<div class="modal-backdrop" id="notice-modal-backdrop" style="display:none"></div>
+<div class="modal-card modal-card--lg" id="legal-notice-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="notice-modal-title">
+  <div class="modal-header">
+    <div class="modal-header-title" id="notice-modal-title">
+      <span>📜</span> वैधानिक कानूनी नोटिस जनरेटर (Statutory Legal Claim Notice)
+    </div>
+    <button class="modal-close-btn" id="notice-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="modal-sub">Draft a formal legal notice under Sec 20, Minimum Wages Act 1948 &amp; Inter-State Migrant Workmen Act 1979</div>
+  <div class="modal-body">
+    <div class="calc-grid">
+      <div class="calc-field">
+        <label for="notice-worker-name">Worker Name (श्रमिक का नाम)</label>
+        <input type="text" id="notice-worker-name" class="calc-input" placeholder="e.g. Ram Kumar" value="Ram Kumar" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-employer-name">Contractor / Employer (ठेकेदार/कंपनी का नाम)</label>
+        <input type="text" id="notice-employer-name" class="calc-input" placeholder="e.g. Apex Builders / Contractor Ramesh" value="Apex Builders Pvt Ltd" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-site-loc">Work Site Location (कार्य स्थल)</label>
+        <input type="text" id="notice-site-loc" class="calc-input" placeholder="e.g. Rohini Sector-6, Delhi" value="Rohini Sector-6 Site, Delhi" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-skill">Skill Category (श्रेणी)</label>
+        <select id="notice-skill" class="calc-input">
+          <option value="unskilled" selected>Unskilled (अकुशल) — ₹743/day</option>
+          <option value="semi-skilled">Semi-Skilled (अर्ध-कुशल) — ₹817/day</option>
+          <option value="skilled">Skilled (कुशल) — ₹899/day</option>
+          <option value="highly-skilled">Highly Skilled (उच्च कुशल) — ₹988/day</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label for="notice-actual-rate">Actual Paid Daily Wage (प्राप्त दैनिक वेतन)</label>
+        <input type="number" id="notice-actual-rate" class="calc-input" value="450" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-days">Total Days Worked (कुल कार्य दिवस)</label>
+        <input type="number" id="notice-days" class="calc-input" value="90" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-overtime-hrs">Total Overtime Hours Worked (अतिरिक्त घंटे)</label>
+        <input type="number" id="notice-overtime-hrs" class="calc-input" value="50" />
+      </div>
+      <div class="calc-field">
+        <label for="notice-claim-type">Claim Type Basis</label>
+        <select id="notice-claim-type" class="calc-input">
+          <option value="wage_and_overtime" selected>Minimum Wage Shortfall + 2x Overtime (Sec 20 MWA 1948)</option>
+          <option value="migrant_allowance">Migrant Displacement Allowance &amp; Fare (1979 Act)</option>
+          <option value="grap_compensation">GRAP Stage IV Work Halt Compensation</option>
+          <option value="full_combined">Full Statutory Combined Claim (All Laws)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live Preview Header & Box -->
+    <div class="notice-preview-header">
+      <span class="notice-preview-title">📄 Formally Formatted Legal Notice Preview</span>
+      <div class="notice-lang-toggle">
+        <button class="n-lang-btn active" id="notice-lang-hi">हिन्दी</button>
+        <button class="n-lang-btn" id="notice-lang-en">English</button>
+      </div>
+    </div>
+    <div class="notice-paper" id="notice-paper-content">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn-ghost" id="notice-copy-btn">📋 Copy Notice</button>
+    <button class="btn-ghost" id="notice-print-btn">🖨️ Print / Download PDF</button>
+    <button class="btn-primary" id="notice-ask-ai-btn">🤖 Ask Shrayak AI to Review</button>
+  </div>
+</div>
+
+<!-- ═══════════════ VOICE DICTATION OVERLAY ═══════════════ -->
+<div class="voice-overlay" id="voice-overlay" style="display:none">
+  <div class="voice-card">
+    <div class="voice-waves">
+      <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+    </div>
+    <div class="voice-title" id="voice-title">🎙️ सुन रहे हैं... (Listening in Hindi/English)</div>
+    <div class="voice-transcript" id="voice-transcript">बोलिए... अपना सवाल पूछें।</div>
+    <button class="voice-cancel-btn" id="voice-cancel-btn">रद्द करें (Cancel)</button>
   </div>
 </div>
 
@@ -477,6 +579,15 @@
   <div class="modal-sub">Free 24/7 Government Toll-Free Lines &amp; Free Legal Aid</div>
   <div class="modal-body">
     <div class="helplines-grid">
+      <div class="helpline-card helpline-card--sos">
+        <div class="hl-icon">📱</div>
+        <div class="hl-info">
+          <div class="hl-name">WhatsApp Distress SOS Action</div>
+          <div class="hl-sub">व्हाट्सएप आपातकालीन सहायता संदेश (Generate worker legal SOS message)</div>
+          <button id="whatsapp-sos-btn" class="hl-action-btn">💬 Send WhatsApp SOS</button>
+        </div>
+      </div>
+
       <div class="helpline-card">
         <div class="hl-icon">📞</div>
         <div class="hl-info">
