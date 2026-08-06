@@ -52,6 +52,7 @@ const { seedWorkerRegistry, searchWorkers }       = require('./workerRegistry');
 const { findNearestOffice, findNearestOfficeByPin, seedGeoIndex } = require('./geoSearch');
 const { getAllPersonas, getPersona }               = require('./personaContext');
 const { getWorkerStats, getWageRates, getNewsItems, getRegistrationCount, initLiveData } = require('./liveDataService');
+const { calculateWorkerSchemes } = require('./localKnowledge');
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
 
@@ -570,20 +571,21 @@ app.get('/api/news', async (req, res) => {
   }
 });
 
-// ─── API: Live Minimum Wages ──────────────────────────────────────────────────
+// ─── API: Worker Scheme Eligibility Calculator ────────────────────────────────
 
 /**
- * GET /api/wages/live
- * Returns current official Delhi minimum wages from Elastic with timestamp.
- * Used by frontend to dynamically compute wage compliance.
+ * GET /api/schemes/check
+ * Parameters: age, gender, category, bocw, eshram, dailyWage
+ * Evaluates matching government welfare schemes for a worker.
  */
-app.get('/api/wages/live', async (req, res) => {
+app.get('/api/schemes/check', (req, res) => {
   try {
-    const wages = await getWageRates();
-    return res.status(200).json(wages);
+    const { age, gender, category, bocw, eshram, dailyWage } = req.query;
+    const result = calculateWorkerSchemes({ age, gender, category, bocw, eshram, dailyWage });
+    return res.status(200).json(result);
   } catch (err) {
-    logger.error('Wages live endpoint error', { error: err.message });
-    return res.status(500).json({ error: 'Wage data unavailable', code: 'WAGES_ERROR' });
+    logger.error('Schemes check endpoint error', { error: err.message });
+    return res.status(500).json({ error: 'Scheme check failed', code: 'SCHEMES_ERROR' });
   }
 });
 
