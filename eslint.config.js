@@ -16,11 +16,17 @@ module.exports = [
         setTimeout: true,
         clearTimeout: true,
         Promise: true,
+        fetch: true,
+        AbortController: true,
+        Buffer: true,
       },
     },
     rules: {
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-console': 'off',
+      'no-useless-escape': 'off',
+      'no-control-regex': 'off',
+      'no-misleading-character-class': 'off',
     },
   },
 ];
