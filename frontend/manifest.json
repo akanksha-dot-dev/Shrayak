@@ -1,0 +1,18 @@
+{
+  "short_name": "Shrayak",
+  "name": "Shrayak — Shramik Sahayak | Delhi Migrant & Labour Rights AI",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text y='.9em' font-size='90'>⚖️</text></svg>",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#050b18",
+  "theme_color": "#050b18",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "AI Legal rights assistant & wage calculator for Delhi migrant workers",
+  "lang": "hi"
+}
