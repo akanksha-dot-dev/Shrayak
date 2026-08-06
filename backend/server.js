@@ -631,62 +631,33 @@ app.use((err, req, res, _next) => {
 // ─── Server Startup ───────────────────────────────────────────────────────────
 
 async function startServer() {
-  // ── Step 1: Ping with the new high-privilege key ──────────────────────────
-  logger.info('🔍 Connecting to Elastic Cloud Serverless...');
-  const health = await testConnection();
-
-  if (health.ok) {
-    logger.info('✅ Elastic Cloud Serverless connected!', {
-      indexWages: health.indexWages,
-      indexTelem: health.indexTelem,
-      latencyMs:  health.latencyMs,
-    });
-    // Ensure telemetry index exists
-    await ensureTelemetryIndex();
-    logger.info(`✅ Telemetry index ready`);
-
-    // ╔══════════════════════════════════════════════════════════════════╗
-    // ║  JUDGE EVALUATION: ELASTIC_GEOSPATIAL + REAL_TIME_DATA         ║
-    // ║  Seed the geo index and create AQI index at startup.           ║
-    // ║  seedGeoIndex() creates delhi_labour_offices with geo_point     ║
-    // ║  mapping and loads all 10 office GPS coordinates.              ║
-    // ║  ensureAQIIndex() creates aqi_realtime time-series index.      ║
-    // ╚══════════════════════════════════════════════════════════════════╝
-    try {
-      await seedGeoIndex();
-      logger.info('✅ Geo office index seeded (delhi_labour_offices)');
-    } catch (geoErr) {
-      logger.warn('⚠️  Geo index seed failed (non-fatal)', { error: geoErr.message });
-    }
-
-    try {
-      await seedWorkerRegistry();
-      logger.info('✅ Worker registry index seeded (delhi_workers)');
-    } catch (workErr) {
-      logger.warn('⚠️  Worker registry index seed failed (non-fatal)', { error: workErr.message });
-    }
-
-    try {
-      await initLiveData();
-      logger.info('✅ Live data streams initialised (wages, news, stats)');
-    } catch (liveErr) {
-      logger.warn('⚠️  Live data init failed (non-fatal)', { error: liveErr.message });
-    }
-
-  } else {
-    logger.warn(
-      '⚠️  Elastic Cloud not reachable — chat uses fallback responses.',
-      { error: health.error }
-    );
-  }
-
   app.listen(PORT, () => {
     logger.info(`🚀 Shrayak server running`, {
       port: PORT,
       environment: process.env.NODE_ENV ?? 'development',
       url: `http://localhost:${PORT}`,
     });
-    logger.info('Endpoints: /api/chat (POST) | /api/offices (GET) | /api/health (GET) | /api/stats (GET) | /api/workers (GET)');
+    logger.info('Endpoints: /api/chat (POST) | /api/offices (GET) | /api/health (GET) | /api/schemes/check (GET) | /api/workers (GET)');
+  });
+
+  // Background non-blocking Elastic Cloud ping
+  logger.info('🔍 Connecting to Elastic Cloud Serverless...');
+  testConnection().then(async (health) => {
+    if (health.ok) {
+      logger.info('✅ Elastic Cloud Serverless connected!', {
+        indexWages: health.indexWages,
+        indexTelem: health.indexTelem,
+        latencyMs:  health.latencyMs,
+      });
+      await ensureTelemetryIndex();
+      try { await seedGeoIndex(); } catch (geoErr) { logger.warn('⚠️  Geo index seed failed', { error: geoErr.message }); }
+      try { await seedWorkerRegistry(); } catch (workErr) { logger.warn('⚠️  Worker registry seed failed', { error: workErr.message }); }
+      try { await initLiveData(); } catch (liveErr) { logger.warn('⚠️  Live data init failed', { error: liveErr.message }); }
+    } else {
+      logger.warn('⚠️  Elastic Cloud not reachable — using local knowledge base.', { error: health.error });
+    }
+  }).catch(err => {
+    logger.warn('⚠️  Elastic ping exception — using local knowledge base.', { error: err.message });
   });
 }
 
