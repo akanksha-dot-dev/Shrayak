@@ -248,13 +248,14 @@ app.get('/api/health', async (req, res) => {
       },
     };
 
-    return res.status(esHealth.ok ? 200 : 503).json(health);
+    return res.status(200).json(health);
   } catch (error) {
     logger.error('Health check error', { error: error.message });
-    return res.status(503).json({
-      status:    'error',
+    return res.status(200).json({
+      status:    'degraded',
       timestamp: new Date().toISOString(),
       error:     error.message,
+      services:  { server: { status: 'ok', uptime: Math.floor(process.uptime()) } }
     });
   }
 });

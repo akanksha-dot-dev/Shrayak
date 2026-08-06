@@ -659,4 +659,117 @@ function generateLocalResponse(query, retrievedDocs = [], language = 'hi') {
   };
 }
 
-module.exports = { generateLocalResponse, detectLocalIntent, WAGES, KNOWLEDGE, KNOWLEDGE_EN };
+/**
+ * Calculates matching government schemes for a worker based on demographic parameters
+ */
+function calculateWorkerSchemes({ age, gender, category, bocw, eshram, dailyWage }) {
+  const ageNum = parseInt(age ?? 25, 10);
+  const wageNum = parseFloat(dailyWage ?? 743);
+  const isBocw = String(bocw) === 'true' || bocw === true;
+  const isEshram = String(eshram) === 'true' || eshram === true;
+  const isFemale = gender === 'female';
+  const isConstruction = category === 'construction' || !category;
+
+  const eligibleSchemes = [];
+
+  // Scheme 1: Delhi BOCW Maternity Benefit
+  if (isConstruction && isFemale) {
+    eligibleSchemes.push({
+      id: 'bocw-maternity',
+      nameHi: 'दिल्ली BOCW प्रसूति सहायता योजना',
+      nameEn: 'Delhi BOCW Maternity Benefit Scheme',
+      amount: '₹50,000 - ₹1,00,000',
+      descriptionHi: 'निर्माण कार्य में लगी महिला श्रमिकों के लिए प्रसूति सहायता राशि',
+      descriptionEn: 'Maternity financial assistance for female construction workers',
+      authority: 'Delhi Building and Other Construction Workers Welfare Board',
+      reqBocw: true,
+      reqEshram: false,
+    });
+  }
+
+  // Scheme 2: Construction Tool Purchase Grant
+  if (isConstruction) {
+    eligibleSchemes.push({
+      id: 'bocw-tools',
+      nameHi: 'औजार खरीद सहायता अनुदान',
+      nameEn: 'Construction Tool Purchase Grant',
+      amount: '₹20,000 (एकमुश्त)',
+      descriptionHi: 'राजमिस्त्री, प्लंबर, कारपेंटर आदि को कार्य औजार किट खरीदने हेतु सहायता',
+      descriptionEn: 'Grant for masons, plumbers, carpenters to purchase professional tool sets',
+      authority: 'Delhi BOCW Welfare Board',
+      reqBocw: true,
+      reqEshram: false,
+    });
+  }
+
+  // Scheme 3: Children Education Scholarship
+  eligibleSchemes.push({
+    id: 'bocw-education',
+    nameHi: 'बच्चों हेतु शिक्षा छात्रवृत्ति योजना',
+    nameEn: 'Children Education Scholarship Scheme',
+    amount: '₹3,000 - ₹12,000 / वर्ष (प्रति बच्चा)',
+    descriptionHi: 'कक्षा 1 से उच्च शिक्षा (ITI, Polytechnic, Degree) तक के बच्चों के लिए वार्षिक छात्रवृत्ति',
+    descriptionEn: 'Annual education stipend for school and higher education students',
+    authority: 'Delhi Labour Department & BOCW',
+    reqBocw: true,
+    reqEshram: false,
+  });
+
+  // Scheme 4: e-Shram PM-SYM Pension
+  if (ageNum >= 18 && ageNum <= 40 && (wageNum * 30 <= 15000)) {
+    eligibleSchemes.push({
+      id: 'pmsym-pension',
+      nameHi: 'PM श्रम योगी मानधन (PM-SYM) पेंशन',
+      nameEn: 'PM Shram Yogi Maandhan Pension',
+      amount: '₹3,000 / माह (60 वर्ष की आयु के बाद)',
+      descriptionHi: '60 वर्ष की आयु पूर्ण होने पर गारंटीकृत प्रतिमाह पेंशन योजना',
+      descriptionEn: 'Guaranteed monthly pension after attaining 60 years of age',
+      authority: 'Ministry of Labour & Employment (MoLE)',
+      reqBocw: false,
+      reqEshram: true,
+    });
+  }
+
+  // Scheme 5: Ayushman Bharat Cashless Health Cover
+  eligibleSchemes.push({
+    id: 'pmjay-health',
+    nameHi: 'आयुष्मान भारत (PM-JAY) स्वास्थ्य बीमा',
+    nameEn: 'Ayushman Bharat PM-JAY Cashless Health Insurance',
+    amount: '₹5,00,000 / परिवार / वर्ष',
+    descriptionHi: 'सरकारी एवं संबद्ध निजी अस्पतालों में निःशुल्क कैशलेस इलाज की सुविधा',
+    descriptionEn: 'Free cashless inpatient hospital treatment per family per year',
+    authority: 'National Health Authority & e-Shram',
+    reqBocw: false,
+    reqEshram: true,
+  });
+
+  // Scheme 6: Minimum Wage Shortfall Recovery (if underpaid)
+  if (wageNum < 743) {
+    const deficitDaily = (743 - wageNum);
+    const deficitMonthly = Math.round(deficitDaily * 26);
+    eligibleSchemes.push({
+      id: 'wage-recovery',
+      nameHi: 'न्यूनतम वेतन बकाया वसूली दावा (Minimum Wage Claim)',
+      nameEn: 'Minimum Wage Shortfall Recovery Claim',
+      amount: `लगभग ₹${deficitMonthly}/माह बकाया + 10x जुर्माना दावा`,
+      descriptionHi: 'न्यूनतम वेतन अधिनियम धारा 20 के तहत ठेकेदार से बकाया वेतन तथा हर्जाना वसूली',
+      descriptionEn: 'Statutory recovery claim under Section 20 of Minimum Wages Act, 1948',
+      authority: 'Authority under Minimum Wages Act, Delhi Labour Court',
+      reqBocw: false,
+      reqEshram: false,
+      isAlert: true,
+    });
+  }
+
+  return {
+    totalEligible: eligibleSchemes.length,
+    schemes: eligibleSchemes,
+    bocwStatus: isBocw ? 'Registered' : 'Action Recommended',
+    eshramStatus: isEshram ? 'Registered' : 'Action Recommended',
+    minWageCompliant: wageNum >= 743,
+    dailyDeficit: wageNum < 743 ? (743 - wageNum) : 0,
+  };
+}
+
+module.exports = { generateLocalResponse, detectLocalIntent, calculateWorkerSchemes, WAGES, KNOWLEDGE, KNOWLEDGE_EN };
+
