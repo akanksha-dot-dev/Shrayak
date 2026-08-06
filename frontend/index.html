@@ -554,9 +554,74 @@
   </div>
 
   <div class="modal-footer">
+    <button class="btn-ghost" id="notice-whatsapp-btn" style="border-color:#25D366; color:#25D366">💬 Share via WhatsApp</button>
     <button class="btn-ghost" id="notice-copy-btn">📋 Copy Notice</button>
     <button class="btn-ghost" id="notice-print-btn">🖨️ Print / Download PDF</button>
     <button class="btn-primary" id="notice-ask-ai-btn">🤖 Ask Shrayak AI to Review</button>
+  </div>
+</div>
+
+<!-- ═══════════════ SCHEME ELIGIBILITY WIZARD MODAL ═══════════════ -->
+<div class="modal-backdrop" id="scheme-modal-backdrop" style="display:none"></div>
+<div class="modal-card" id="scheme-wizard-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="scheme-modal-title">
+  <div class="modal-header">
+    <div class="modal-header-title" id="scheme-modal-title">
+      <span>📋</span> Labour Welfare Scheme Eligibility Wizard
+    </div>
+    <button class="modal-close-btn" id="scheme-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="modal-sub">जांचें कि आप किन सरकारी कल्याणकारी योजनाओं के लिए पात्र हैं (Find eligible schemes &amp; benefits)</div>
+  <div class="modal-body">
+    <div class="calc-grid">
+      <div class="calc-field">
+        <label for="scheme-age">Worker Age (आयु - वर्ष)</label>
+        <input type="number" id="scheme-age" class="calc-input" value="28" min="14" max="70" />
+      </div>
+      <div class="calc-field">
+        <label for="scheme-gender">Gender (लिंग)</label>
+        <select id="scheme-gender" class="calc-input">
+          <option value="male" selected>Male (पुरुष)</option>
+          <option value="female">Female (महिला - Maternity &amp; Women benefits)</option>
+          <option value="other">Other (अन्य)</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label for="scheme-category">Work Occupation (कार्य क्षेत्र)</label>
+        <select id="scheme-category" class="calc-input">
+          <option value="construction" selected>Construction (भवन/निर्माण कार्य)</option>
+          <option value="domestic">Domestic Worker (घरेलू कामगार)</option>
+          <option value="vendor">Street Vendor (पटरी दुकानदार)</option>
+          <option value="factory">Factory / Industrial (कारखाना मजदूर)</option>
+          <option value="transport">Transport / Driver (परिवहन मजदूर)</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label for="scheme-wage">Current Daily Wage (दैनिक वेतन ₹)</label>
+        <input type="number" id="scheme-wage" class="calc-input" value="450" />
+      </div>
+      <div class="calc-field">
+        <label for="scheme-bocw">BOCW Card Registered? (निर्माण बोर्ड कार्ड)</label>
+        <select id="scheme-bocw" class="calc-input">
+          <option value="false" selected>No (नहीं है)</option>
+          <option value="true">Yes (हाँ - दिल्ली BOCW कार्ड है)</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label for="scheme-eshram">e-Shram UAN Registered? (ई-श्रम कार्ड)</label>
+        <select id="scheme-eshram" class="calc-input">
+          <option value="true" selected>Yes (हाँ - UAN कार्ड है)</option>
+          <option value="false">No (नहीं है)</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="scheme-calculate-btn" class="btn-primary" style="width:100%; margin-top:16px; justify-content:center; padding:12px">
+      ✨ <strong>Check Eligible Welfare Schemes (योजनाएं खोजें)</strong>
+    </button>
+
+    <div id="scheme-results-container" style="margin-top:20px; display:none">
+      <!-- Dynamic results rendered by app.js -->
+    </div>
   </div>
 </div>
 
