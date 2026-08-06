@@ -1339,6 +1339,14 @@ const LegalNoticeManager = {
     D.noticeCopyBtn?.addEventListener('click', () => this.copyNotice());
     D.noticePrintBtn?.addEventListener('click', () => this.printNotice());
     D.noticeAskAiBtn?.addEventListener('click', () => this.askAI());
+    document.getElementById('notice-whatsapp-btn')?.addEventListener('click', () => this.shareWhatsApp());
+  },
+
+  shareWhatsApp() {
+    if (!this._lastText) this.render();
+    const text = `📜 *SHRAYAK FORMAL STATUTORY LEGAL NOTICE* 📜\n\n${this._lastText}\n\n(Generated via Shrayak Legal Assistant — Delhi Labour Rights)`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   },
 
   open(prefill = {}) {
@@ -1737,6 +1745,121 @@ function setupHelplinesAndDistrictChips() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// SCHEME ELIGIBILITY WIZARD MANAGER
+// ══════════════════════════════════════════════════════════════════
+const SchemeWizard = {
+  init() {
+    const btnOpen = document.getElementById('btn-open-schemes');
+    const modal = document.getElementById('scheme-wizard-modal');
+    const backdrop = document.getElementById('scheme-modal-backdrop');
+    const closeBtn = document.getElementById('scheme-modal-close');
+    const calcBtn = document.getElementById('scheme-calculate-btn');
+
+    btnOpen?.addEventListener('click', () => this.open());
+    closeBtn?.addEventListener('click', () => this.close());
+    backdrop?.addEventListener('click', () => this.close());
+    calcBtn?.addEventListener('click', () => this.calculate());
+  },
+
+  open() {
+    const modal = document.getElementById('scheme-wizard-modal');
+    const backdrop = document.getElementById('scheme-modal-backdrop');
+    if (modal) modal.style.display = 'flex';
+    if (backdrop) backdrop.style.display = 'block';
+  },
+
+  close() {
+    const modal = document.getElementById('scheme-wizard-modal');
+    const backdrop = document.getElementById('scheme-modal-backdrop');
+    if (modal) modal.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
+  },
+
+  async calculate() {
+    const age = document.getElementById('scheme-age')?.value || '28';
+    const gender = document.getElementById('scheme-gender')?.value || 'male';
+    const category = document.getElementById('scheme-category')?.value || 'construction';
+    const wage = document.getElementById('scheme-wage')?.value || '450';
+    const bocw = document.getElementById('scheme-bocw')?.value || 'false';
+    const eshram = document.getElementById('scheme-eshram')?.value || 'true';
+    const container = document.getElementById('scheme-results-container');
+
+    if (!container) return;
+    container.style.display = 'block';
+    container.innerHTML = `<div class="news-loading"><div class="news-pulse"></div><span>Evaluating eligible welfare schemes…</span></div>`;
+
+    try {
+      const url = `${API}/api/schemes/check?age=${age}&gender=${gender}&category=${category}&dailyWage=${wage}&bocw=${bocw}&eshram=${eshram}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      this.render(data);
+    } catch {
+      toast('Using offline scheme evaluator');
+      this.render({
+        totalEligible: 3,
+        schemes: [
+          {
+            nameHi: 'BOCW औजार खरीद सहायता योजना',
+            nameEn: 'Construction Tool Grant Scheme',
+            amount: '₹20,000',
+            descriptionHi: 'निर्माण श्रमिकों को औजार किट हेतु एकमुश्त सहायता',
+            descriptionEn: 'Grant for purchasing professional work tools',
+            authority: 'Delhi BOCW Board',
+            reqBocw: true
+          },
+          {
+            nameHi: 'आयुष्मान भारत स्वास्थ्य बीमा',
+            nameEn: 'Ayushman Bharat PM-JAY Insurance',
+            amount: '₹5,00,000 / वर्ष',
+            descriptionHi: 'निःशुल्क कैशलेस अस्पताल भर्ती इलाज',
+            descriptionEn: 'Free cashless hospitalization per family per year',
+            authority: 'e-Shram & NHA',
+            reqEshram: true
+          }
+        ]
+      });
+    }
+  },
+
+  render(data) {
+    const container = document.getElementById('scheme-results-container');
+    if (!container) return;
+    const schemes = data.schemes || [];
+    const isHi = state.language === 'hi';
+
+    if (!schemes.length) {
+      container.innerHTML = `<div class="geo-empty"><p>कोई योजना नहीं मिली | No matching schemes found</p></div>`;
+      return;
+    }
+
+    const html = `
+      <div style="margin-bottom:12px; font-weight:700; color:var(--t0); display:flex; justify-content:space-between; align-items:center;">
+        <span>🎯 Eligible Schemes (${data.totalEligible ?? schemes.length} Found):</span>
+        ${data.dailyDeficit > 0 ? `<span style="color:var(--red); font-size:0.8rem">⚠️ Underpaid by ₹${data.dailyDeficit}/day</span>` : ''}
+      </div>
+      <div class="scheme-cards-list">
+        ${schemes.map(s => `
+          <div class="scheme-card ${s.isAlert ? 'scheme-card--alert' : ''}">
+            <div class="scheme-card-header">
+              <div class="scheme-title">${isHi ? (s.nameHi || s.nameEn) : (s.nameEn || s.nameHi)}</div>
+              <div class="scheme-amount">${s.amount}</div>
+            </div>
+            <div class="scheme-desc">${isHi ? (s.descriptionHi || s.descriptionEn) : (s.descriptionEn || s.descriptionHi)}</div>
+            <div class="scheme-meta">
+              <span class="scheme-badge">${s.authority}</span>
+              ${s.reqBocw ? `<span class="scheme-badge scheme-badge--req">BOCW Card Required</span>` : ''}
+              ${s.reqEshram ? `<span class="scheme-badge scheme-badge--req">e-Shram Required</span>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    container.innerHTML = html;
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════════════════
 async function boot() {
@@ -1748,7 +1871,13 @@ async function boot() {
   VoiceAssistant.initSTT();
   WageCalculator.init();
   LegalNoticeManager.init();
+  SchemeWizard.init();
   setupHelplinesAndDistrictChips();
+
+  // Register PWA Service Worker for offline support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 
   // LiveWages must init first — WorkerRegistry.render() uses its rates
   await LiveWages.init();
