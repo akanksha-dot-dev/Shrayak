@@ -383,7 +383,7 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
  * @param {string} query
  * @returns {string} — Fallback message in Hindi
  */
-function getFallbackResponse(query) {
+function getFallbackResponse(_query) {
   return `नमस्ते! मैं श्रायक हूँ — दिल्ली के मजदूरों का AI सहायक।
 
 मैं आपकी इन विषयों में मदद कर सकता हूँ:
