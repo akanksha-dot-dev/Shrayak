@@ -2945,3 +2945,37 @@ body {
   color: #f59e0b;
   border-color: rgba(245, 158, 11, 0.3);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   PRINT & LEGAL NOTICE PDF EXPORT STYLES
+   ══════════════════════════════════════════════════════════════════ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .modal-card, .modal-card * {
+    visibility: visible;
+  }
+  .modal-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .modal-header, .modal-footer, .notice-preview-header, .modal-close-btn {
+    display: none !important;
+  }
+  .notice-paper {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    font-size: 11pt !important;
+  }
+}
