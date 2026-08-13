@@ -36,10 +36,9 @@ const { buildRAGResponse, getFallbackResponse } = require('./rag_search');
 const { getOfficeByPin, getOfficesByDistrict } = require('./labourOffices');
 // Primary Elastic modules (new, serverless-compatible)
 const { testConnection }       = require('./elasticConfig');
-const { ensureTelemetryIndex, getTelemetryStats, retrieveLabourFacts } = require('./ragService');
+const { ensureTelemetryIndex, getTelemetryStats } = require('./ragService');
 // Legacy compatibility imports (kept for existing code paths)
-const { getElasticClient, pingElastic, stripPII } = require('./elastic_client');
-const { createIndex } = require('./ingest_wages');
+const { stripPII } = require('./elastic_client');
 
 // ╔══════════════════════════════════════════════════════════════════╗
 // ║  JUDGE EVALUATION: WORKER_REGISTRY + ELASTIC_GEOSPATIAL         ║
@@ -50,8 +49,8 @@ const { createIndex } = require('./ingest_wages');
 // ╚══════════════════════════════════════════════════════════════════╝
 const { seedWorkerRegistry, searchWorkers }       = require('./workerRegistry');
 const { findNearestOffice, findNearestOfficeByPin, seedGeoIndex } = require('./geoSearch');
-const { getAllPersonas, getPersona }               = require('./personaContext');
-const { getWorkerStats, getWageRates, getNewsItems, getRegistrationCount, initLiveData } = require('./liveDataService');
+const { getAllPersonas }                           = require('./personaContext');
+const { getWorkerStats, getNewsItems, getRegistrationCount, initLiveData } = require('./liveDataService');
 const { calculateWorkerSchemes } = require('./localKnowledge');
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
