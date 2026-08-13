@@ -681,6 +681,8 @@ process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection', { reason: String(reason) });
 });
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app; // For testing
