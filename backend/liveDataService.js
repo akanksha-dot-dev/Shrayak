@@ -66,7 +66,6 @@ const WAGE_FALLBACK = {
 
 // ── PIB RSS Feed URL (Press Information Bureau — Ministry of Labour) ──────────
 const PIB_RSS_URL   = 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3';
-const MOL_NEWS_URL  = 'https://labour.delhi.gov.in/'; // fallback static items
 
 // ── Helper: Simple HTTPS GET ──────────────────────────────────────────────────
 function httpsGet(url, timeoutMs = 8000) {

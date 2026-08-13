@@ -702,7 +702,7 @@ async function buildRAGResponse(sanitizedQuery, options = {}) {
           hybridMode: false,
         });
         fallbackHits = searchResult.hits;
-      } catch (searchErr) {
+      } catch (_searchErr) {
         logger.warn('[rag_search] Fallback Elastic search also failed, utilizing cached knowledge base only');
       }
 
