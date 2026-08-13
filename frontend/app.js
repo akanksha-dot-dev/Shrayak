@@ -1838,17 +1838,20 @@ const SchemeWizard = {
         ${data.dailyDeficit > 0 ? `<span style="color:var(--red); font-size:0.8rem">⚠️ Underpaid by ₹${data.dailyDeficit}/day</span>` : ''}
       </div>
       <div class="scheme-cards-list">
-        ${schemes.map(s => `
+        ${schemes.map((s, idx) => `
           <div class="scheme-card ${s.isAlert ? 'scheme-card--alert' : ''}">
             <div class="scheme-card-header">
               <div class="scheme-title">${isHi ? (s.nameHi || s.nameEn) : (s.nameEn || s.nameHi)}</div>
               <div class="scheme-amount">${s.amount}</div>
             </div>
             <div class="scheme-desc">${isHi ? (s.descriptionHi || s.descriptionEn) : (s.descriptionEn || s.descriptionHi)}</div>
-            <div class="scheme-meta">
-              <span class="scheme-badge">${s.authority}</span>
-              ${s.reqBocw ? `<span class="scheme-badge scheme-badge--req">BOCW Card Required</span>` : ''}
-              ${s.reqEshram ? `<span class="scheme-badge scheme-badge--req">e-Shram Required</span>` : ''}
+            <div class="scheme-meta" style="justify-content:space-between; align-items:center;">
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <span class="scheme-badge">${s.authority}</span>
+                ${s.reqBocw ? `<span class="scheme-badge scheme-badge--req">BOCW Card Required</span>` : ''}
+                ${s.reqEshram ? `<span class="scheme-badge scheme-badge--req">e-Shram Required</span>` : ''}
+              </div>
+              <button class="scheme-ask-btn btn-ghost" data-scheme-idx="${idx}" style="padding:3px 8px; font-size:0.72rem;">🤖 How to Apply</button>
             </div>
           </div>
         `).join('')}
@@ -1856,6 +1859,22 @@ const SchemeWizard = {
     `;
 
     container.innerHTML = html;
+
+    container.querySelectorAll('.scheme-ask-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.schemeIdx, 10);
+        const scheme = schemes[idx];
+        if (scheme) {
+          this.close();
+          const q = isHi
+            ? `मुझे '${scheme.nameHi || scheme.nameEn}' योजना में आवेदन करने की पूरी प्रक्रिया, आवश्यक दस्तावेज और निकटतम आवेदन केंद्र बताएं।`
+            : `Explain step-by-step how to apply for '${scheme.nameEn || scheme.nameHi}', required documents, and nearest office.`;
+          D.chatInput.value = q;
+          autoResize();
+          sendMsg(q);
+        }
+      });
+    });
   }
 };
 

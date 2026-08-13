@@ -2,7 +2,7 @@
  * sw.js — Shrayak Service Worker
  * Offline Caching & Fallback Support for Migrant Workers
  */
-const CACHE_NAME = 'shrayak-v1.0';
+const CACHE_NAME = 'shrayak-v1.1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

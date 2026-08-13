@@ -27,7 +27,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const winston = require('winston');
 const { v4: uuidv4 } = require('uuid');
 
-const { knnSearch, generateEmbedding } = require('./elasticClient');
+const { knnSearch } = require('./elasticClient');
 const { stripPII, detectPII } = require('./piiSanitizer');
 const { getOfficeByPin, getOfficesByDistrict, formatOfficeForChat } = require('./labourOffices');
 
