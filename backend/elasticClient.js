@@ -24,7 +24,6 @@ require('dotenv').config();
 const { Client } = require('@elastic/elasticsearch');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const winston = require('winston');
-const { v4: uuidv4 } = require('uuid');
 
 const { MINIMUM_WAGE_DOCUMENTS } = require('./seedData/minimumWages');
 const { LABOUR_LAW_DOCUMENTS } = require('./seedData/labourLaws');
