@@ -39,7 +39,7 @@
 
 require('dotenv').config();
 
-const { getElasticClient, stripPII, stripPIIFromObject } = require('./elastic_client');
+const { getElasticClient, stripPII } = require('./elastic_client');
 const winston = require('winston');
 
 // ─── Logger ───────────────────────────────────────────────────────────────────

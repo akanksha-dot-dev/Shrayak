@@ -341,7 +341,7 @@ async function getAQIAdvisory() {
   let aqiData;
   try {
     aqiData = await fetchLiveAQI();
-  } catch (_err) {
+  } catch {
     aqiData = { aqi: 150, source: 'Error fallback', station: 'Delhi', timestamp: new Date().toISOString(), live: false };
   }
 
