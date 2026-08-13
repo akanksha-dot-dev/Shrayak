@@ -27,9 +27,13 @@ test.before((t, done) => {
 
 test.after((t, done) => {
   if (server) {
-    server.close(done);
+    server.close(() => {
+      done();
+      process.exit(0);
+    });
   } else {
     done();
+    process.exit(0);
   }
 });
 
