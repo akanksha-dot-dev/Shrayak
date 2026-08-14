@@ -720,9 +720,9 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
   const avatar = isWelcome ? '⚖️' : (state.persona?.avatar ?? '⚖️');
   const content = fmt(text);
 
-  // Citations
+  // Citations (Interactive Grounded Law Badges)
   const cites = citations.length
-    ? `<div class="citations">${citations.map(c => `<span class="cite-chip">📋 ${esc(String(c))}</span>`).join('')}</div>`
+    ? `<div class="citations">${citations.map(c => `<span class="cite-chip citation-badge" style="cursor:pointer" title="Click to view full statutory context">📖 ${esc(String(c))}</span>`).join('')}</div>`
     : '';
 
   // Nearest office
@@ -747,7 +747,7 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
     <div class="msg-body">
       <div class="msg-bubble">
         <div class="msg-bubble-tools" style="display:flex;gap:6px;position:absolute;top:8px;right:10px;">
-          <button class="msg-tts-btn" title="Listen to response (Audio Read-Aloud)" aria-label="Listen to response">🔊 Listen</button>
+          <button class="msg-tts-btn btn-tts" title="Listen to response (Audio Read-Aloud)" aria-label="Listen to response">🔊 Listen</button>
           <button class="msg-copy-btn" title="Copy response text" aria-label="Copy message text">📋 Copy</button>
         </div>
         <div class="msg-content"></div>
@@ -795,6 +795,14 @@ function addBotMsg(text, citations = [], office = null, isWelcome = false, aqiCt
       VoiceAssistant.speak(text, ttsBtn);
     });
   }
+
+  // Attach Citation detail modal click handlers
+  d.querySelectorAll('.citation-badge').forEach(badge => {
+    badge.addEventListener('click', () => {
+      const citeText = badge.textContent.replace(/^📖\s*/, '');
+      CitationViewer.open(citeText);
+    });
+  });
 
   // Reaction buttons
   d.querySelectorAll('.react-btn').forEach(btn => {
