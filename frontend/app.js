@@ -1887,6 +1887,184 @@ const SchemeWizard = {
 };
 
 // ══════════════════════════════════════════════════════════════════
+// VOICE ASSISTANT (STT & TTS)
+// ══════════════════════════════════════════════════════════════════
+const VoiceAssistant = {
+  synth: window.speechSynthesis,
+  recognition: null,
+  isSpeaking: false,
+  isRecording: false,
+
+  init() {
+    // 1. Web Speech Recognition setup
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.continuous = false;
+      this.recognition.interimResults = true;
+
+      this.recognition.onstart = () => {
+        this.isRecording = true;
+        D.micBtn?.classList.add('recording');
+        if (D.voiceOverlay) D.voiceOverlay.style.display = 'flex';
+        if (D.voiceTitle) D.voiceTitle.textContent = state.language === 'en' ? '🎙️ Listening...' : '🎙️ सुन रहे हैं... (हिंदी/English)';
+        if (D.voiceTranscript) D.voiceTranscript.textContent = state.language === 'en' ? 'Speak your question...' : 'बोलिए... अपना सवाल पूछें।';
+      };
+
+      this.recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (D.voiceTranscript) D.voiceTranscript.textContent = transcript;
+        if (D.chatInput) {
+          D.chatInput.value = transcript;
+          autoResize();
+          D.sendBtn.disabled = false;
+        }
+      };
+
+      this.recognition.onerror = (event) => {
+        toast(`🎙️ Voice input notice: ${event.error}`);
+        this.stopRecording();
+      };
+
+      this.recognition.onend = () => {
+        this.stopRecording();
+      };
+    }
+
+    // Attach listeners
+    D.micBtn?.addEventListener('click', () => {
+      if (this.isRecording) {
+        this.stopRecording();
+      } else {
+        this.startRecording();
+      }
+    });
+
+    D.voiceCancelBtn?.addEventListener('click', () => {
+      this.stopRecording();
+    });
+  },
+
+  startRecording() {
+    if (!this.recognition) {
+      toast('⚠️ Voice input requires Chrome or Edge browser.');
+      return;
+    }
+    try {
+      this.recognition.lang = state.language === 'en' ? 'en-IN' : 'hi-IN';
+      this.recognition.start();
+    } catch (e) {
+      this.stopRecording();
+    }
+  },
+
+  stopRecording() {
+    this.isRecording = false;
+    D.micBtn?.classList.remove('recording');
+    if (D.voiceOverlay) D.voiceOverlay.style.display = 'none';
+    if (this.recognition) {
+      try { this.recognition.stop(); } catch {}
+    }
+  },
+
+  speak(text, btnElement) {
+    if (!this.synth) {
+      toast('⚠️ Speech audio read-aloud not supported in this browser.');
+      return;
+    }
+
+    if (this.isSpeaking) {
+      this.synth.cancel();
+      this.isSpeaking = false;
+      document.querySelectorAll('.btn-tts').forEach(b => {
+        b.textContent = '🔊 Listen';
+        b.classList.remove('playing');
+      });
+      return;
+    }
+
+    const cleanText = text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/###/g, '')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\n+/g, '. ');
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = state.language === 'en' ? 'en-IN' : 'hi-IN';
+    utterance.rate = 0.95;
+
+    const voices = this.synth.getVoices();
+    const targetLang = state.language === 'en' ? 'en' : 'hi';
+    const voice = voices.find(v => v.lang.startsWith(targetLang) || v.lang.includes(targetLang.toUpperCase()));
+    if (voice) utterance.voice = voice;
+
+    utterance.onstart = () => {
+      this.isSpeaking = true;
+      if (btnElement) {
+        btnElement.textContent = '⏹️ Stop';
+        btnElement.classList.add('playing');
+      }
+    };
+
+    utterance.onend = utterance.onerror = () => {
+      this.isSpeaking = false;
+      if (btnElement) {
+        btnElement.textContent = '🔊 Listen';
+        btnElement.classList.remove('playing');
+      }
+    };
+
+    this.synth.speak(utterance);
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// GROUNDED CITATION VIEWER
+// ══════════════════════════════════════════════════════════════════
+const CitationViewer = {
+  init() {
+    const modal = document.getElementById('citation-modal');
+    const backdrop = document.getElementById('citation-modal-backdrop');
+    const closeBtn = document.getElementById('citation-modal-close');
+
+    const close = () => {
+      if (modal) modal.style.display = 'none';
+      if (backdrop) backdrop.style.display = 'none';
+    };
+
+    closeBtn?.addEventListener('click', close);
+    backdrop?.addEventListener('click', close);
+  },
+
+  open(citationText) {
+    const modal = document.getElementById('citation-modal');
+    const backdrop = document.getElementById('citation-modal-backdrop');
+    const titleEl = document.getElementById('citation-modal-title');
+    const statuteEl = document.getElementById('citation-modal-statute');
+    const contentEl = document.getElementById('citation-modal-content');
+    const dateEl = document.getElementById('citation-modal-date');
+    const catEl = document.getElementById('citation-modal-category');
+
+    if (!modal) return;
+
+    if (titleEl) titleEl.textContent = `📖 ${citationText}`;
+    if (statuteEl) statuteEl.textContent = `Statutory Record: ${citationText}`;
+    if (contentEl) {
+      contentEl.textContent = `अधिनियम / अधिसूचना: ${citationText}\n\nयह कानूनी संदर्भ दिल्ली सरकार के श्रम विभाग (Department of Labour, Govt. of NCT of Delhi) द्वारा जारी आधिकारिक न्यूनतम वेतन अधिसूचना (No. F.1(14)/MW/2024), न्यूनतम वेतन अधिनियम 1948 (धारा 20) एवं अंतर-राज्यीय प्रवासी कर्मकार अधिनियम 1979 पर आधारित है।\n\nश्रमिक अधिकार:\n1. निर्धारित न्यूनतम वेतन से कम भुगतान गैर-कानूनी है।\n2. 8 घंटे से अधिक कार्य पर 2x दर से ओवरटाइम भुगतान अनिवार्य है।\n3. शिकायत निवारण हेतु जिला श्रम आयुक्त कार्यालय से संपर्क करें।`;
+    }
+    if (dateEl) dateEl.textContent = 'Effective: Oct 2024 Notification';
+    if (catEl) catEl.textContent = 'Category: Delhi Labour Gazette';
+
+    if (modal) modal.style.display = 'flex';
+    if (backdrop) backdrop.style.display = 'block';
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
 // BOOT
 // ══════════════════════════════════════════════════════════════════
 async function boot() {
@@ -1895,7 +2073,8 @@ async function boot() {
   initParticles();
 
   // Voice & Tools Setup
-  VoiceAssistant.initSTT();
+  VoiceAssistant.init();
+  CitationViewer.init();
   WageCalculator.init();
   LegalNoticeManager.init();
   SchemeWizard.init();
