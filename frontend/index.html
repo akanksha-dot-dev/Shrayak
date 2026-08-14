@@ -711,6 +711,33 @@
   </div>
 </div>
 
+
+<!-- ═══════════════ GROUNDED CITATION PREVIEW MODAL ═══════════════ -->
+<div class="modal-backdrop" id="citation-modal-backdrop" style="display:none"></div>
+<div class="modal-card" id="citation-modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="citation-modal-title">
+  <div class="modal-header">
+    <div class="modal-header-title" id="citation-modal-title">
+      <span>📖</span> Grounded Legal Citation
+    </div>
+    <button class="modal-close-btn" id="citation-modal-close" aria-label="Close">✕</button>
+  </div>
+  <div class="modal-sub" id="citation-modal-statute">Statute &amp; Official Delhi Gazette Reference</div>
+  <div class="modal-body">
+    <div class="citation-meta-tags" id="citation-modal-tags" style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap">
+      <span class="chip chip-elastic">⚡ Elastic Grounded Doc</span>
+      <span class="chip" id="citation-modal-date" style="background:rgba(99,102,241,0.15); color:var(--indigo-lt)">Effective Date</span>
+      <span class="chip" id="citation-modal-category" style="background:rgba(6,182,212,0.15); color:var(--cyan)">Category</span>
+    </div>
+    <div class="citation-content-box" id="citation-modal-content" style="background:var(--bg-glass-2); border:1px solid var(--border-light); border-radius:12px; padding:16px; font-size:14px; line-height:1.6; color:var(--t1); white-space:pre-wrap">
+      <!-- Full statute snippet rendered dynamically -->
+    </div>
+    <div class="citation-source-footer" id="citation-modal-source" style="margin-top:12px; font-size:12px; color:var(--t3)">
+      Authority: Labour Department, Govt of NCT of Delhi
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
+
