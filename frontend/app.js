@@ -10,91 +10,93 @@
 const API = '';
 
 const state = {
-  persona:          null,
-  aqiData:          null,
-  loading:          false,
+  persona: null,
+  aqiData: null,
+  loading: false,
   rateLimitedUntil: 0,
-  language:         'hi',
+  language: 'hi',
 };
 
 // ══════════════════════════════════════════════════════════════════
 // DOM — resolved after DOMContentLoaded
 // ══════════════════════════════════════════════════════════════════
 let D = {};
+//added
+
 
 function resolveDOM() {
   const g = id => document.getElementById(id);
   D = {
     // Language
-    langHiBtn:    g('lang-hi-btn'),
-    langEnBtn:    g('lang-en-btn'),
+    langHiBtn: g('lang-hi-btn'),
+    langEnBtn: g('lang-en-btn'),
     // Worker Registry
-    workerInput:  g('worker-search-input'),
-    workerBtn:    g('worker-search-btn'),
+    workerInput: g('worker-search-input'),
+    workerBtn: g('worker-search-btn'),
     workerResult: g('worker-result'),
     // Sidebar persona
     personaCards: g('persona-cards'),
     // Geo
-    pinInput:     g('pin-input'),
-    pinBtn:       g('pin-search-btn'),
-    geoResult:    g('geo-result'),
+    pinInput: g('pin-input'),
+    pinBtn: g('pin-search-btn'),
+    geoResult: g('geo-result'),
     // Security
-    telemDot:     g('telem-dot'),
-    telemStatus:  g('telemetry-status'),
-    statTotal:    g('stat-total'),
-    statPII:      g('stat-pii'),
-    statLatency:  g('stat-latency'),
-    statSuccess:  g('stat-success'),
+    telemDot: g('telem-dot'),
+    telemStatus: g('telemetry-status'),
+    statTotal: g('stat-total'),
+    statPII: g('stat-pii'),
+    statLatency: g('stat-latency'),
+    statSuccess: g('stat-success'),
     // Chat
-    chatAvatar:   g('chat-persona-name') ? g('chat-avatar') : null,
-    chatName:     g('chat-persona-name'),
-    chatSub:      g('chat-persona-sub'),
-    starters:     g('starter-questions'),
-    messages:     g('chat-messages'),
-    chatInput:    g('chat-input'),
-    charCount:    g('char-count'),
-    sendBtn:      g('send-btn'),
+    chatAvatar: g('chat-persona-name') ? g('chat-avatar') : null,
+    chatName: g('chat-persona-name'),
+    chatSub: g('chat-persona-sub'),
+    starters: g('starter-questions'),
+    messages: g('chat-messages'),
+    chatInput: g('chat-input'),
+    charCount: g('char-count'),
+    sendBtn: g('send-btn'),
     // Elastic
-    elasticDot:   g('elastic-dot'),
+    elasticDot: g('elastic-dot'),
     // Mobile
-    menuBtn:      g('mobile-menu-btn'),
-    sidebar:      document.querySelector('.sidebar'),
-    sbOverlay:    g('sb-overlay'),
+    menuBtn: g('mobile-menu-btn'),
+    sidebar: document.querySelector('.sidebar'),
+    sbOverlay: g('sb-overlay'),
     // Toast
-    toast:        g('toast'),
+    toast: g('toast'),
     // New elements
-    thinkingBar:  g('thinking-bar'),
-    scrollFab:    g('scroll-fab'),
+    thinkingBar: g('thinking-bar'),
+    scrollFab: g('scroll-fab'),
     scrollFabBadge: g('scroll-fab-badge'),
-    micBtn:       g('mic-btn'),
+    micBtn: g('mic-btn'),
     sbCollapseBtn: g('sb-collapse-btn'),
     // Tool buttons & Modals
-    btnOpenCalc:      g('btn-open-calc'),
-    btnOpenNotice:    g('btn-open-notice'),
+    btnOpenCalc: g('btn-open-calc'),
+    btnOpenNotice: g('btn-open-notice'),
     btnOpenHelplines: g('btn-open-helplines'),
-    calcModal:        g('wage-calc-modal'),
-    calcBackdrop:     g('calc-modal-backdrop'),
-    calcClose:        g('calc-modal-close'),
+    calcModal: g('wage-calc-modal'),
+    calcBackdrop: g('calc-modal-backdrop'),
+    calcClose: g('calc-modal-close'),
     calcGenNoticeBtn: g('calc-gen-notice-btn'),
-    helplineModal:    g('helpline-modal'),
+    helplineModal: g('helpline-modal'),
     helplineBackdrop: g('helpline-modal-backdrop'),
-    helplineClose:    g('helpline-modal-close'),
-    whatsappSosBtn:   g('whatsapp-sos-btn'),
+    helplineClose: g('helpline-modal-close'),
+    whatsappSosBtn: g('whatsapp-sos-btn'),
     // Notice Modal
-    noticeModal:      g('legal-notice-modal'),
-    noticeBackdrop:   g('notice-modal-backdrop'),
-    noticeClose:      g('notice-modal-close'),
-    noticePaper:      g('notice-paper-content'),
-    noticeLangHi:     g('notice-lang-hi'),
-    noticeLangEn:     g('notice-lang-en'),
-    noticeCopyBtn:    g('notice-copy-btn'),
-    noticePrintBtn:   g('notice-print-btn'),
-    noticeAskAiBtn:   g('notice-ask-ai-btn'),
+    noticeModal: g('legal-notice-modal'),
+    noticeBackdrop: g('notice-modal-backdrop'),
+    noticeClose: g('notice-modal-close'),
+    noticePaper: g('notice-paper-content'),
+    noticeLangHi: g('notice-lang-hi'),
+    noticeLangEn: g('notice-lang-en'),
+    noticeCopyBtn: g('notice-copy-btn'),
+    noticePrintBtn: g('notice-print-btn'),
+    noticeAskAiBtn: g('notice-ask-ai-btn'),
     // Voice Dictation Overlay
-    voiceOverlay:     g('voice-overlay'),
-    voiceTitle:       g('voice-title'),
-    voiceTranscript:  g('voice-transcript'),
-    voiceCancelBtn:   g('voice-cancel-btn'),
+    voiceOverlay: g('voice-overlay'),
+    voiceTitle: g('voice-title'),
+    voiceTranscript: g('voice-transcript'),
+    voiceCancelBtn: g('voice-cancel-btn'),
   };
 }
 
@@ -259,7 +261,7 @@ const Personas = {
     D.chatAvatar.textContent = p.avatar;
     D.chatAvatar.style.borderColor = p.color;
     D.chatName.textContent = isEn ? `${p.name} — ${p.occupation}` : `${p.nameHindi} — ${p.occupationHindi}`;
-    D.chatSub.textContent  = isEn ? `${p.origin} | ${p.occupation}` : `${p.originHindi} | ${p.occupationHindi}`;
+    D.chatSub.textContent = isEn ? `${p.origin} | ${p.occupation}` : `${p.originHindi} | ${p.occupationHindi}`;
 
     // Starter questions
     this.renderStarters(p);
@@ -448,8 +450,8 @@ const Stats = {
       if (d.error) { D.telemStatus.textContent = 'Stats unavailable'; return; }
       D.telemStatus.textContent = `24h · ${d.totalRequests ?? 0} reqs`;
       D.telemDot.classList.add('sec-dot--green');
-      D.statTotal.textContent   = d.totalRequests ?? '--';
-      D.statPII.textContent     = d.piiDetectionRate ?? '--';
+      D.statTotal.textContent = d.totalRequests ?? '--';
+      D.statPII.textContent = d.piiDetectionRate ?? '--';
       D.statLatency.textContent = d.latency?.avgMs ? `${d.latency.avgMs}ms` : '--';
       D.statSuccess.textContent = d.successRate ?? '--';
     } catch {
@@ -503,28 +505,28 @@ const LiveStats = {
   },
 
   render(d) {
-    const total   = document.getElementById('stat-total-workers');
-    const bocw    = document.getElementById('stat-bocw');
-    const under   = document.getElementById('stat-underpaid');
-    const avgW    = document.getElementById('stat-avg-wage');
-    const hint    = document.getElementById('stats-fetchedAt');
-    const badge   = document.getElementById('stats-live-badge');
-    const pill    = document.getElementById('data-stream-label');
+    const total = document.getElementById('stat-total-workers');
+    const bocw = document.getElementById('stat-bocw');
+    const under = document.getElementById('stat-underpaid');
+    const avgW = document.getElementById('stat-avg-wage');
+    const hint = document.getElementById('stats-fetchedAt');
+    const badge = document.getElementById('stats-live-badge');
+    const pill = document.getElementById('data-stream-label');
     const pillDot = document.getElementById('data-stream-dot');
 
     if (total) this.animateNum(total, String(d.totalWorkers ?? '--'));
-    if (bocw)  this.animateNum(bocw,  String(d.bocwRegistered ?? '--'));
+    if (bocw) this.animateNum(bocw, String(d.bocwRegistered ?? '--'));
     if (under) this.animateNum(under, String(d.underpaidCount ?? '--'));
-    if (avgW)  this.animateNum(avgW,  d.avgWage ? `₹${d.avgWage}` : '--');
+    if (avgW) this.animateNum(avgW, d.avgWage ? `₹${d.avgWage}` : '--');
 
     const ts = d.fetchedAt ? new Date(d.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
     if (hint) hint.textContent = `Last updated: ${ts} · ${d.live ? 'Elastic Live' : 'Cached'}`;
 
     if (badge) {
       badge.style.background = d.live ? 'rgba(16,185,129,.12)' : 'rgba(251,191,36,.12)';
-      badge.style.color      = d.live ? 'var(--green)' : 'var(--yellow)';
-      badge.style.borderColor= d.live ? 'rgba(16,185,129,.28)' : 'rgba(251,191,36,.28)';
-      badge.textContent      = d.live ? '● LIVE' : '○ Cached';
+      badge.style.color = d.live ? 'var(--green)' : 'var(--yellow)';
+      badge.style.borderColor = d.live ? 'rgba(16,185,129,.28)' : 'rgba(251,191,36,.28)';
+      badge.textContent = d.live ? '● LIVE' : '○ Cached';
     }
 
     // Update topbar data pill
@@ -555,7 +557,7 @@ const NewsFeed = {
   },
 
   render(d) {
-    const el  = document.getElementById('news-feed');
+    const el = document.getElementById('news-feed');
     const badge = document.getElementById('news-live-badge');
     if (!el) return;
 
@@ -580,10 +582,10 @@ const NewsFeed = {
     }).join('');
 
     if (badge) {
-      badge.style.background  = d.live ? 'rgba(16,185,129,.12)' : 'rgba(251,191,36,.12)';
-      badge.style.color       = d.live ? 'var(--green)' : 'var(--yellow)';
+      badge.style.background = d.live ? 'rgba(16,185,129,.12)' : 'rgba(251,191,36,.12)';
+      badge.style.color = d.live ? 'var(--green)' : 'var(--yellow)';
       badge.style.borderColor = d.live ? 'rgba(16,185,129,.28)' : 'rgba(251,191,36,.28)';
-      badge.textContent       = d.live ? '● PIB Live' : '○ Archived';
+      badge.textContent = d.live ? '● PIB Live' : '○ Archived';
     }
   },
 };
@@ -636,7 +638,7 @@ async function sendMsg(override) {
   if (text.length > 500) { toast('❌ Message too long (500 char limit)'); return; }
 
   const pinMatch = text.match(/\b(1[0-9]{5})\b/);
-  const pin      = pinMatch?.[1] ?? null;
+  const pin = pinMatch?.[1] ?? null;
 
   addUserMsg(text);
   D.chatInput.value = '';
@@ -653,13 +655,13 @@ async function sendMsg(override) {
 
   try {
     const res = await fetch(`${API}/api/chat`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        query:      text,
-        language:   state.language ?? 'hi',
-        ...(pin                && { pinCode: pin }),
-        ...(state.persona?.id  && { personaId: state.persona.id }),
+      body: JSON.stringify({
+        query: text,
+        language: state.language ?? 'hi',
+        ...(pin && { pinCode: pin }),
+        ...(state.persona?.id && { personaId: state.persona.id }),
       }),
     });
 
@@ -707,7 +709,7 @@ function addUserMsg(text) {
   d.className = 'msg msg--user';
   d.innerHTML = `
     <div class="msg-body">
-      <div class="msg-bubble">${esc(text).replace(/\n/g,'<br>')}</div>
+      <div class="msg-bubble">${esc(text).replace(/\n/g, '<br>')}</div>
       <div class="msg-time">${now()} · You</div>
     </div>
     <div class="msg-avatar">${state.persona?.avatar ?? '👤'}</div>
@@ -1007,7 +1009,7 @@ function setLanguage(lang) {
   } else {
     // Welcome message fallback refresh
     D.messages.innerHTML = '';
-    const welcomeText = isEn 
+    const welcomeText = isEn
       ? `🙏 **Welcome to Shrayak!** 
 I am now ready to answer your questions in English. Let's discuss your labour rights. Please select a worker persona from the sidebar to begin.`
       : `🙏 **नमस्ते! मैं Shrayak हूं — आपका श्रमिक अधिकार सहायक।**
@@ -1245,7 +1247,7 @@ const VoiceAssistant = {
       D.micBtn.title = 'Voice input (Click to speak)';
     }
     if (this.recognition) {
-      try { this.recognition.stop(); } catch (e) {}
+      try { this.recognition.stop(); } catch (e) { }
     }
   },
 
@@ -1562,23 +1564,23 @@ const WageCalculator = {
 
   calculate() {
     const skillCategory = document.getElementById('calc-skill')?.value ?? 'unskilled';
-    const minDailyWage  = LiveWages.getMin(skillCategory);
+    const minDailyWage = LiveWages.getMin(skillCategory);
 
-    const actualWage    = parseFloat(document.getElementById('calc-actual-wage')?.value ?? '500') || 0;
-    const hoursPerDay   = parseFloat(document.getElementById('calc-hours')?.value ?? '10') || 8;
-    const daysWorked    = parseFloat(document.getElementById('calc-days')?.value ?? '26') || 1;
-    const isMigrant     = document.getElementById('calc-migrant')?.checked ?? true;
+    const actualWage = parseFloat(document.getElementById('calc-actual-wage')?.value ?? '500') || 0;
+    const hoursPerDay = parseFloat(document.getElementById('calc-hours')?.value ?? '10') || 8;
+    const daysWorked = parseFloat(document.getElementById('calc-days')?.value ?? '26') || 1;
+    const isMigrant = document.getElementById('calc-migrant')?.checked ?? true;
 
     const normalHours = 8;
     const overtimeHoursPerDay = Math.max(0, hoursPerDay - normalHours);
-    const totalOvertimeHours  = overtimeHoursPerDay * daysWorked;
+    const totalOvertimeHours = overtimeHoursPerDay * daysWorked;
 
     const minHourlyRate = minDailyWage / 8;
     const overtimeHourlyRate = minHourlyRate * 2;
     const totalOvertimePay = Math.round(totalOvertimeHours * overtimeHourlyRate);
 
     const wageShortfallPerDay = Math.max(0, minDailyWage - actualWage);
-    const totalBaseShortfall   = Math.round(wageShortfallPerDay * daysWorked);
+    const totalBaseShortfall = Math.round(wageShortfallPerDay * daysWorked);
 
     const monthlyMinWage = minDailyWage * 26;
     const displacementAllowance = isMigrant ? Math.round(monthlyMinWage * 0.5) : 0;
@@ -1966,7 +1968,7 @@ const VoiceAssistant = {
     D.micBtn?.classList.remove('recording');
     if (D.voiceOverlay) D.voiceOverlay.style.display = 'none';
     if (this.recognition) {
-      try { this.recognition.stop(); } catch {}
+      try { this.recognition.stop(); } catch { }
     }
   },
 
@@ -2082,7 +2084,7 @@ async function boot() {
 
   // Register PWA Service Worker for offline support
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').catch(() => { });
   }
 
   // LiveWages must init first — WorkerRegistry.render() uses its rates
