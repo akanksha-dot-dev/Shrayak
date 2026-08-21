@@ -14,6 +14,35 @@
 </head>
 <body>
 
+<!-- Hero Splash Screen -->
+<div id="splash-screen">
+  <div class="splash-logo">
+    <svg viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="8" fill="url(#sp-grad)"/>
+      <path d="M14 6L8 10v4l6 4 6-4v-4L14 6z" fill="white" opacity="0.9"/>
+      <path d="M8 14v4l6 4 6-4v-4l-6 4-6-4z" fill="white" opacity="0.6"/>
+      <defs>
+        <linearGradient id="sp-grad" x1="0" y1="0" x2="28" y2="28">
+          <stop offset="0%" stop-color="#6366f1"/>
+          <stop offset="100%" stop-color="#06b6d4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="splash-logo-ring"></div>
+  </div>
+  <div class="splash-title">Shrayak</div>
+  <div class="splash-tagline">श्रमिक सहायक — Worker Rights AI</div>
+  <div class="splash-dots">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+  </div>
+  <div class="splash-badges">
+    <span class="splash-badge splash-badge--elastic">⚡ Elastic Cloud</span>
+    <span class="splash-badge splash-badge--gemini">✦ Gemini AI</span>
+  </div>
+</div>
+
 <!-- Root App -->
 <div class="root">
 
@@ -54,165 +83,217 @@
     <div class="sb-body">
 
       <!-- ─── Persona Selector ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label">
+      <div class="sb-section" id="sb-sec-persona">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-persona')">
           <span>👥</span> Worker Persona
+          <span class="sb-section-chevron">▼</span>
         </div>
-        <p class="sb-hint">Select a worker for personalised advice</p>
-        <div id="persona-cards" class="persona-list">
-          <div class="persona-skel"></div>
-          <div class="persona-skel"></div>
-          <div class="persona-skel"></div>
+        <div class="sb-section-body">
+          <p class="sb-hint">Select a worker for personalised advice</p>
+          <div id="persona-cards" class="persona-list">
+            <div class="persona-skel"></div>
+            <div class="persona-skel"></div>
+            <div class="persona-skel"></div>
+          </div>
         </div>
       </div>
 
       <!-- ─── Worker Registry Search Panel ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label">
+      <div class="sb-section" id="sb-sec-registry">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-registry')">
           <span>👥</span> Worker Registry
           <span class="elastic-badge">eShram Search</span>
+          <span class="sb-section-chevron">▼</span>
         </div>
-        <p class="sb-hint">Verify eShram UAN registry and wage compliance status</p>
-        <div class="geo-search">
-          <input id="worker-search-input" class="geo-input" type="text"
-            placeholder="Name or UAN (e.g. Ramesh)"
-            aria-label="Worker name or UAN" />
-          <button id="worker-search-btn" class="geo-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-          </button>
-        </div>
-        <div id="worker-result" class="geo-result">
-          <div class="geo-empty">
-            <div class="geo-empty-icon">🔍</div>
-            <p>Enter worker name or UAN to verify minimum wage compliance</p>
+        <div class="sb-section-body">
+          <p class="sb-hint">Verify eShram UAN registry and wage compliance status</p>
+          <div class="geo-search">
+            <input id="worker-search-input" class="geo-input" type="text"
+              placeholder="Name or UAN (e.g. Ramesh)"
+              aria-label="Worker name or UAN" />
+            <button id="worker-search-btn" class="geo-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </button>
+          </div>
+          <div id="worker-result" class="geo-result">
+            <div class="geo-empty">
+              <div class="geo-empty-icon">🔍</div>
+              <p>Enter worker name or UAN to verify minimum wage compliance</p>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ─── Live Worker Stats Bar ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label">
+      <div class="sb-section" id="sb-sec-stats">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-stats')">
           <span>📊</span> Live Worker Stats
           <span class="live-badge" id="stats-live-badge">● LIVE</span>
+          <span class="sb-section-chevron">▼</span>
         </div>
-        <p class="sb-hint" id="stats-fetchedAt">Fetching from Elastic…</p>
-        <div class="live-stats-grid" id="live-stats-grid">
-          <div class="live-stat-card">
-            <div class="live-stat-num" id="stat-total-workers">--</div>
-            <div class="live-stat-label">eShram Indexed</div>
-          </div>
-          <div class="live-stat-card">
-            <div class="live-stat-num" id="stat-bocw">--</div>
-            <div class="live-stat-label">BOCW Registered</div>
-          </div>
-          <div class="live-stat-card live-stat-card--alert">
-            <div class="live-stat-num" id="stat-underpaid">--</div>
-            <div class="live-stat-label">Underpaid</div>
-          </div>
-          <div class="live-stat-card">
-            <div class="live-stat-num" id="stat-avg-wage">--</div>
-            <div class="live-stat-label">Avg Wage/Day</div>
+        <div class="sb-section-body">
+          <p class="sb-hint" id="stats-fetchedAt">Fetching from Elastic…</p>
+          <div class="live-stats-grid" id="live-stats-grid">
+            <div class="live-stat-card">
+              <div class="live-stat-num" id="stat-total-workers">--</div>
+              <div class="live-stat-label">eShram Indexed</div>
+            </div>
+            <div class="live-stat-card">
+              <div class="live-stat-num" id="stat-bocw">--</div>
+              <div class="live-stat-label">BOCW Registered</div>
+            </div>
+            <div class="live-stat-card live-stat-card--alert">
+              <div class="live-stat-num" id="stat-underpaid">--</div>
+              <div class="live-stat-label">Underpaid</div>
+            </div>
+            <div class="live-stat-card">
+              <div class="live-stat-num" id="stat-avg-wage">--</div>
+              <div class="live-stat-label">Avg Wage/Day</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ─── Labour News Feed ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label">
+      <div class="sb-section" id="sb-sec-news">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-news')">
           <span>📰</span> Labour News
           <span class="live-badge" id="news-live-badge">● PIB/MoLE</span>
+          <span class="sb-section-chevron">▼</span>
         </div>
-        <p class="sb-hint">Latest govt circulars &amp; notifications</p>
-        <div id="news-feed" class="news-feed">
-          <div class="news-loading">
-            <div class="news-pulse"></div>
-            <span>Fetching latest circulars…</span>
+        <div class="sb-section-body">
+          <p class="sb-hint">Latest govt circulars &amp; notifications</p>
+          <div id="news-feed" class="news-feed">
+            <div class="news-loading">
+              <div class="news-pulse"></div>
+              <span>Fetching latest circulars…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Live AQI Widget ─── -->
+      <div class="sb-section" id="sb-sec-aqi">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-aqi')">
+          <span>🌫️</span> Delhi Air Quality
+          <span class="live-badge" id="aqi-live-badge">● LIVE</span>
+          <span class="sb-section-chevron">▼</span>
+        </div>
+        <div class="sb-section-body">
+          <p class="sb-hint">Real-time AQI · GRAP construction advisory</p>
+          <div class="sb-aqi-widget" id="aqi-widget">
+            <div class="sb-aqi-main">
+              <div class="sb-aqi-gauge">
+                <svg viewBox="0 0 60 60">
+                  <circle class="sb-aqi-gauge-bg" cx="30" cy="30" r="30" stroke-dasharray="188" />
+                  <circle class="sb-aqi-gauge-fill" id="aqi-gauge-fill" cx="30" cy="30" r="30" />
+                </svg>
+                <div class="sb-aqi-center">
+                  <span class="sb-aqi-num" id="aqi-number">--</span>
+                  <span class="sb-aqi-unit">AQI</span>
+                </div>
+              </div>
+              <div class="sb-aqi-info">
+                <div class="sb-aqi-label" id="aqi-label">Fetching…</div>
+                <div class="sb-aqi-stage" id="aqi-stage">⏳ Loading</div>
+                <div class="sb-aqi-updated" id="aqi-updated"></div>
+              </div>
+            </div>
+            <div class="sb-aqi-advisory" id="aqi-advisory">🏗️ Checking construction work advisory…</div>
           </div>
         </div>
       </div>
 
       <!-- ─── Geo Office Finder ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label">
+      <div class="sb-section" id="sb-sec-geo">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="true" onclick="toggleSbSection('sb-sec-geo')">
           <span>🏛️</span> Nearest Office
           <span class="elastic-badge">geo_distance</span>
+          <span class="sb-section-chevron">▼</span>
         </div>
-        <div class="geo-search">
-          <input id="pin-input" class="geo-input" type="text"
-            placeholder="Pin code (e.g. 110092)" maxlength="6" inputmode="numeric"
-            aria-label="Delhi pin code" />
-          <button id="pin-search-btn" class="geo-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-          </button>
-        </div>
-        <div class="geo-district-chips" id="geo-district-chips">
-          <button class="geo-chip" data-pin="110085">Rohini (NW)</button>
-          <button class="geo-chip" data-pin="110020">Okhla (S)</button>
-          <button class="geo-chip" data-pin="110032">Shahdara (E)</button>
-          <button class="geo-chip" data-pin="110015">Kirti Nagar (W)</button>
-          <button class="geo-chip" data-pin="110001">Connaught (C)</button>
-        </div>
-        <div id="geo-result" class="geo-result">
-          <div class="geo-empty">
-            <div class="geo-empty-icon">📍</div>
-            <p>Enter a Delhi pin code to find your nearest Labour Office</p>
+        <div class="sb-section-body">
+          <div class="geo-search">
+            <input id="pin-input" class="geo-input" type="text"
+              placeholder="Pin code (e.g. 110092)" maxlength="6" inputmode="numeric"
+              aria-label="Delhi pin code" />
+            <button id="pin-search-btn" class="geo-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </button>
+          </div>
+          <div class="geo-district-chips" id="geo-district-chips">
+            <button class="geo-chip" data-pin="110085">Rohini (NW)</button>
+            <button class="geo-chip" data-pin="110020">Okhla (S)</button>
+            <button class="geo-chip" data-pin="110032">Shahdara (E)</button>
+            <button class="geo-chip" data-pin="110015">Kirti Nagar (W)</button>
+            <button class="geo-chip" data-pin="110001">Connaught (C)</button>
+          </div>
+          <div id="geo-result" class="geo-result">
+            <div class="geo-empty">
+              <div class="geo-empty-icon">📍</div>
+              <p>Enter a Delhi pin code to find your nearest Labour Office</p>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- ─── Security Panel ─── -->
-      <div class="sb-section">
-        <div class="sb-section-label"><span>🔐</span> Security & Observability</div>
-        <div class="sec-items">
-          <div class="sec-item">
-            <div class="sec-dot sec-dot--green"></div>
-            <div class="sec-item-info">
-              <span class="sec-item-name">PII Stripper</span>
-              <span class="sec-item-val">Regex Redaction Active</span>
-            </div>
-          </div>
-          <div class="sec-item">
-            <div class="sec-dot sec-dot--green"></div>
-            <div class="sec-item-info">
-              <span class="sec-item-name">Rate Limiter</span>
-              <span class="sec-item-val">50 req / 15 min / IP</span>
-            </div>
-          </div>
-          <div class="sec-item">
-            <div class="sec-dot sec-dot--green"></div>
-            <div class="sec-item-info">
-              <span class="sec-item-name">Prompt Guard</span>
-              <span class="sec-item-val">Injection Detection</span>
-            </div>
-          </div>
-          <div class="sec-item">
-            <div class="sec-dot" id="telem-dot"></div>
-            <div class="sec-item-info">
-              <span class="sec-item-name">Elastic Telemetry</span>
-              <span class="sec-item-val" id="telemetry-status">Connecting…</span>
-            </div>
-          </div>
+      <div class="sb-section" id="sb-sec-security">
+        <div class="sb-section-label" role="button" tabindex="0" aria-expanded="false" onclick="toggleSbSection('sb-sec-security')">
+          <span>🔐</span> Security &amp; Observability
+          <span class="sb-section-chevron" style="transform: rotate(-90deg);">▼</span>
         </div>
-        <div class="stats-grid">
-          <div class="stat-box">
-            <span class="stat-num" id="stat-total">--</span>
-            <span class="stat-desc">Requests</span>
+        <div class="sb-section-body" style="max-height:0; opacity:0;">
+          <div class="sec-items">
+          <div class="sec-item">
+            <div class="sec-dot sec-dot--green"></div>
+            <div class="sec-item-info">
+                <span class="sec-item-name">PII Stripper</span>
+                <span class="sec-item-val">Regex Redaction Active</span>
+              </div>
+            </div>
+            <div class="sec-item">
+              <div class="sec-dot sec-dot--green"></div>
+              <div class="sec-item-info">
+                <span class="sec-item-name">Rate Limiter</span>
+                <span class="sec-item-val">50 req / 15 min / IP</span>
+              </div>
+            </div>
+            <div class="sec-item">
+              <div class="sec-dot sec-dot--green"></div>
+              <div class="sec-item-info">
+                <span class="sec-item-name">Prompt Guard</span>
+                <span class="sec-item-val">Injection Detection</span>
+              </div>
+            </div>
+            <div class="sec-item">
+              <div class="sec-dot" id="telem-dot"></div>
+              <div class="sec-item-info">
+                <span class="sec-item-name">Elastic Telemetry</span>
+                <span class="sec-item-val" id="telemetry-status">Connecting…</span>
+              </div>
+            </div>
           </div>
-          <div class="stat-box">
-            <span class="stat-num" id="stat-pii">--</span>
-            <span class="stat-desc">PII Rate</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-num" id="stat-latency">--</span>
-            <span class="stat-desc">Avg Latency</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-num" id="stat-success">--</span>
-            <span class="stat-desc">Success</span>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-num" id="stat-total">--</span>
+              <span class="stat-desc">Requests</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num" id="stat-pii">--</span>
+              <span class="stat-desc">PII Rate</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num" id="stat-latency">--</span>
+              <span class="stat-desc">Avg Latency</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num" id="stat-success">--</span>
+              <span class="stat-desc">Success</span>
+            </div>
           </div>
         </div>
       </div>
