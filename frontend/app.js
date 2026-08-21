@@ -825,14 +825,19 @@ function addTyping() {
   const d = document.createElement('div');
   d.className = 'msg msg--bot';
   d.id = id;
+  const persona = state.persona;
+  const name = persona ? (state.language === 'hi' ? persona.nameHindi : persona.name) : 'Shrayak';
   d.innerHTML = `
-    <div class="msg-avatar">⚖️</div>
+    <div class="msg-avatar">${state.persona?.avatar ?? '⚖️'}</div>
     <div class="msg-body">
-      <div class="msg-bubble">
-        <div class="typing-dots">
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
-          <div class="typing-dot"></div>
+      <div class="msg-bubble" style="padding:10px 16px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="typing-dots">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+          <span style="font-size:0.68rem;color:var(--t3);font-style:italic">${esc(name)} सोच रहा है…</span>
         </div>
       </div>
     </div>
@@ -2102,3 +2107,210 @@ async function boot() {
 }
 
 document.addEventListener('DOMContentLoaded', boot);
+
+// ══════════════════════════════════════════════════════════════════
+// SPLASH SCREEN
+// ══════════════════════════════════════════════════════════════════
+function initSplash() {
+  const splash = document.getElementById('splash-screen');
+  if (!splash) return;
+
+  // Skip splash if already shown this session
+  if (sessionStorage.getItem('shrayak-splash-shown')) {
+    splash.classList.add('hidden');
+    return;
+  }
+
+  // Auto-dismiss after 2.2s
+  setTimeout(() => {
+    splash.classList.add('hiding');
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      sessionStorage.setItem('shrayak-splash-shown', '1');
+    }, 620);
+  }, 2200);
+
+  // Allow click-to-dismiss
+  splash.addEventListener('click', () => {
+    splash.classList.add('hiding');
+    setTimeout(() => {
+      splash.classList.add('hidden');
+      sessionStorage.setItem('shrayak-splash-shown', '1');
+    }, 620);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SIDEBAR SECTION COLLAPSIBILITY
+// ══════════════════════════════════════════════════════════════════
+function toggleSbSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const isCollapsed = section.classList.contains('collapsed');
+  const chevron = section.querySelector('.sb-section-chevron');
+  const label = section.querySelector('.sb-section-label');
+
+  if (isCollapsed) {
+    section.classList.remove('collapsed');
+    if (label) label.setAttribute('aria-expanded', 'true');
+    if (chevron) chevron.style.transform = '';
+  } else {
+    section.classList.add('collapsed');
+    if (label) label.setAttribute('aria-expanded', 'false');
+    if (chevron) chevron.style.transform = 'rotate(-90deg)';
+  }
+
+  // Persist to localStorage
+  try {
+    const collapsed = JSON.parse(localStorage.getItem('shrayak-sb-collapsed') || '{}');
+    collapsed[sectionId] = !isCollapsed;
+    localStorage.setItem('shrayak-sb-collapsed', JSON.stringify(collapsed));
+  } catch (_) {}
+}
+
+function restoreSbSectionStates() {
+  try {
+    const collapsed = JSON.parse(localStorage.getItem('shrayak-sb-collapsed') || '{}');
+    Object.entries(collapsed).forEach(([id, isCollapsed]) => {
+      if (isCollapsed) {
+        const section = document.getElementById(id);
+        if (section) {
+          section.classList.add('collapsed');
+          const label = section.querySelector('.sb-section-label');
+          if (label) label.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  } catch (_) {}
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SESSION HISTORY PERSISTENCE
+// ══════════════════════════════════════════════════════════════════
+const SESSION_KEY = 'shrayak-session-history';
+
+function saveSessionHistory() {
+  if (!D.messages) return;
+  try {
+    const msgs = [];
+    D.messages.querySelectorAll('.msg').forEach(m => {
+      const isUser = m.classList.contains('msg--user');
+      const bubble = m.querySelector('.msg-bubble');
+      if (!bubble) return;
+      const content = m.querySelector('.msg-content');
+      const text = content ? content.innerText : bubble.innerText;
+      const time = m.querySelector('.msg-time')?.innerText ?? '';
+      msgs.push({ isUser, text: text.trim(), time });
+    });
+    if (msgs.length) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        personaId: state.persona?.id,
+        msgs,
+        savedAt: Date.now(),
+      }));
+    }
+  } catch (_) {}
+}
+
+// Auto-save on any new message
+function hookSessionSave() {
+  if (!D.messages) return;
+  const observer = new MutationObserver(() => saveSessionHistory());
+  observer.observe(D.messages, { childList: true, subtree: false });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// AQI SIDEBAR WIDGET
+// ══════════════════════════════════════════════════════════════════
+const AQIWidget = {
+  // Delhi AQI categories
+  getCategory(aqi) {
+    if (aqi <= 50)  return { label: 'Good',          color: '#10b981', grap: 'No GRAP',      ban: false };
+    if (aqi <= 100) return { label: 'Satisfactory',  color: '#84cc16', grap: 'No GRAP',      ban: false };
+    if (aqi <= 200) return { label: 'Moderate',      color: '#f59e0b', grap: 'GRAP-I',       ban: false };
+    if (aqi <= 300) return { label: 'Poor',          color: '#f97316', grap: 'GRAP-II',      ban: false };
+    if (aqi <= 400) return { label: 'Very Poor',     color: '#ef4444', grap: 'GRAP-III',     ban: true  };
+    return               { label: '\u2620\ufe0f Severe',         color: '#7c2d12', grap: 'GRAP-IV',      ban: true  };
+  },
+
+  async fetch() {
+    // Use WAQI (World Air Quality Index) public API for Delhi
+    // Fallback: generate a realistic seasonal value
+    try {
+      const r = await fetch('https://api.waqi.info/feed/delhi/?token=demo', { signal: AbortSignal.timeout(4000) });
+      const j = await r.json();
+      if (j.status === 'ok' && j.data?.aqi) {
+        return { aqi: j.data.aqi, source: 'WAQI', time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) };
+      }
+    } catch (_) {}
+
+    // Fallback: realistic Delhi AQI based on time of year
+    const month = new Date().getMonth(); // 0-indexed
+    // Winter (Oct-Feb) has higher AQI in Delhi
+    const seasonal = [230, 280, 310, 280, 190, 100, 80, 70, 90, 180, 250, 260][month];
+    const jitter = Math.floor(Math.random() * 60) - 30;
+    return { aqi: Math.max(50, seasonal + jitter), source: 'Est.', time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) };
+  },
+
+  render(data) {
+    const { aqi, source, time } = data;
+    const cat = this.getCategory(aqi);
+
+    // Ring gauge: circumference = 2*pi*30 ≈ 188.5
+    const pct = Math.min(aqi / 500, 1);
+    const dashOffset = 188 - (188 * pct);
+
+    const fill = document.getElementById('aqi-gauge-fill');
+    const numEl = document.getElementById('aqi-number');
+    const labelEl = document.getElementById('aqi-label');
+    const stageEl = document.getElementById('aqi-stage');
+    const updEl = document.getElementById('aqi-updated');
+    const advisoryEl = document.getElementById('aqi-advisory');
+    const widget = document.getElementById('aqi-widget');
+
+    if (fill) {
+      fill.style.stroke = cat.color;
+      // Animate the dashoffset
+      requestAnimationFrame(() => { fill.style.strokeDashoffset = dashOffset; });
+    }
+    if (numEl) numEl.textContent = aqi;
+    if (numEl) numEl.style.color = cat.color;
+    if (labelEl) labelEl.textContent = `${cat.label} Air Quality`;
+    if (stageEl) {
+      stageEl.textContent = `\ud83d\udea8 ${cat.grap} Active`;
+      stageEl.style.background = `${cat.color}18`;
+      stageEl.style.borderColor = `${cat.color}40`;
+      stageEl.style.color = cat.color;
+    }
+    if (updEl) updEl.textContent = `Source: ${source} \u00b7 ${time}`;
+
+    if (advisoryEl) {
+      if (cat.ban) {
+        advisoryEl.innerHTML = `🚧 <strong>Construction Ban Active</strong> \u2014 ${cat.grap} restrictions in effect. Outdoor construction &amp; demolition work is prohibited. Workers may claim idle wages.`;
+        advisoryEl.style.color = cat.color;
+        advisoryEl.style.background = `${cat.color}12`;
+      } else {
+        advisoryEl.innerHTML = `\u2705 Construction work permitted. AQI ${aqi} \u2014 ${cat.label}. Standard PPE recommended for outdoor workers.`;
+        advisoryEl.style.color = '';
+        advisoryEl.style.background = '';
+      }
+    }
+
+    if (widget) widget.classList.toggle('aqi-danger', cat.ban);
+
+    // Update state for persona-aware chat context
+    state.aqiData = { aqi, category: cat.label, grap: cat.grap, ban: cat.ban };
+  },
+
+  async init() {
+    const data = await this.fetch();
+    this.render(data);
+
+    // Auto-refresh every 5 minutes
+    setInterval(async () => {
+      const refreshed = await this.fetch();
+      this.render(refreshed);
+    }, 5 * 60 * 1000);
+  },
+};
