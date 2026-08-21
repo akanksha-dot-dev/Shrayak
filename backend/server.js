@@ -87,7 +87,7 @@ app.use(
         styleSrc:   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
         imgSrc:     ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://pib.gov.in', 'https://labour.delhi.gov.in'],
+        connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://pib.gov.in', 'https://labour.delhi.gov.in', 'https://api.waqi.info'],
         frameSrc:   ["'none'"],
         objectSrc:  ["'none'"],
         upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,

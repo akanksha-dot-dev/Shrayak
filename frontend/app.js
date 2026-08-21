@@ -2075,9 +2075,14 @@ const CitationViewer = {
 // BOOT
 // ══════════════════════════════════════════════════════════════════
 async function boot() {
+  // Splash screen — DOM is ready at DOMContentLoaded, no D needed
+  initSplash();
+
   resolveDOM();
+  restoreSbSectionStates();
   setupInput();
   initParticles();
+  hookSessionSave();
 
   // Voice & Tools Setup
   VoiceAssistant.init();
@@ -2101,6 +2106,7 @@ async function boot() {
     LiveStats.init(),
     NewsFeed.init(),
     healthCheck(),
+    AQIWidget.init(),
   ]);
 
   setInterval(healthCheck, 60_000);
